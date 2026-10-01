@@ -56,15 +56,15 @@ assert_contains "scan is offline, read-only, hardened" \
   "run --rm --network none --read-only --user dev --cap-drop=ALL --security-opt no-new-privileges -v jt-acme:/src:ro -w /src job-sandbox:base grep -rn postinstall ." "$(log)"
 run scan acme git log -p
 assert_contains "scan git neutralises repo config" \
-  "job-sandbox:base git -c core.fsmonitor=false -c core.hooksPath=/dev/null -c diff.external= -c core.pager=cat log --no-ext-diff --no-textconv -p" "$(log)"
+  "job-sandbox:base git -c core.fsmonitor=false -c core.hooksPath=/dev/null -c diff.external= -c core.pager=cat -c gpg.program=/bin/false -c core.attributesFile=/dev/null log --no-ext-diff --no-textconv -p" "$(log)"
 
 clear_log
-for bad in "npm ls" "node x.js" "sh -c id" "git config -l" "find . -exec cat {} ;" "find . -delete"; do
+for bad in "npm ls" "node x.js" "sh -c id" "git config -l" "find . -exec cat {} ;" "find . -delete" "git log -p --ext-diff" "git log -p --textconv" "git show --show-signature" "git log --format=%G?" "git log -c core.pager=sh" "find . -fprint /tmp/x" "awk -f x.awk ."; do
   set -f; run scan acme $bad; set +f
   assert_eq "scan refuses: $bad" 1 "$CODE"
 done
-run scan acme awk 'BEGIN{system("id")}'
-assert_eq "scan refuses awk system()" 1 "$CODE"
+run scan acme awk '{print}' x
+assert_eq "scan refuses: awk" 1 "$CODE"
 assert_eq "refused scans never reach docker run" "" "$(log | grep '^run ')"
 run scan ghost ls
 assert_eq "scan of unknown project fails" 1 "$CODE"

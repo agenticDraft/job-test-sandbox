@@ -118,18 +118,25 @@ cmd_new() {
 
 # README Phase 3 / Task 2: read commands only, and no way to start a program from the repo.
 check_scan_command() {
-  case "$1" in
-    ls|find|cat|head|tail|grep|awk|wc|file) ;;
-    git) case "${2:-}" in log|show) ;; *) die "scan allows only 'git log' and 'git show'" ;; esac ;;
-    *) die "scan allows only: ls find cat head tail grep awk wc file, git log, git show (got '$1')" ;;
-  esac
   local a
-  for a in "$@"; do
-    case "$a" in
-      -exec|-execdir|-ok|-okdir|-delete) die "scan: find $a is not allowed" ;;
-      *system*|*getline*|*'|'*) if [ "$1" = awk ]; then die "scan: awk may not run commands"; fi ;;
-    esac
-  done
+  case "$1" in
+    ls|cat|head|tail|grep|wc|file) ;;
+    find)
+      for a in "$@"; do
+        case "$a" in
+          -exec|-execdir|-ok|-okdir|-delete|-fprint|-fprint0|-fprintf|-fls) die "scan: find $a is not allowed" ;;
+        esac
+      done ;;
+    git)
+      case "${2:-}" in log|show) ;; *) die "scan allows only 'git log' and 'git show'" ;; esac
+      for a in "$@"; do
+        case "$a" in
+          --ext-diff*|--textconv*|--show-signature*|--output*|--exec*|-c|-c*|*%G*)
+            die "scan: git option $a could run a program from the repo" ;;
+        esac
+      done ;;
+    *) die "scan allows only: ls find cat head tail grep wc file, git log, git show (got '$1')" ;;
+  esac
 }
 
 cmd_scan() {
@@ -142,6 +149,7 @@ cmd_scan() {
     # The repo's own git config could name programs (diff.external, textconv, fsmonitor, hooks).
     local sub="$2"; shift 2
     set -- git -c core.fsmonitor=false -c core.hooksPath=/dev/null -c diff.external= -c core.pager=cat \
+      -c gpg.program=/bin/false -c core.attributesFile=/dev/null \
       "$sub" --no-ext-diff --no-textconv "$@"
   fi
   docker run --rm --network none --read-only "${HARDEN[@]}" \
