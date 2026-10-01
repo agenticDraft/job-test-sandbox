@@ -1,0 +1,13 @@
+{
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#d9480f",
+    "titleBar.activeForeground": "#ffffff",
+    "titleBar.inactiveBackground": "#a33a0c",
+    "statusBar.background": "#d9480f",
+    "statusBar.foreground": "#ffffff"
+  },
+  "window.title": "🧪 SANDBOX — ${rootName}",
+  "task.allowAutomaticTasks": "off",
+  "security.workspace.trust.enabled": true,
+  "telemetry.telemetryLevel": "off"
+}
