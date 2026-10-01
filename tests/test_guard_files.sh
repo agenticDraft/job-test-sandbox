@@ -64,4 +64,7 @@ f Write file_path /fake/repo/.claude/artifacts/job-test-sandbox.html 0
 f Edit file_path .claude/artifacts/job-test-sandbox.html 0
 f Write file_path /fake/repo/.claude/artifactsx/y 2
 
+f Write file_path /fake/repo/USER-GUIDE.md 0
+f Edit file_path FIRST-INSTALLATION.md 0
+
 finish

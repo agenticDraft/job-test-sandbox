@@ -32,7 +32,7 @@ EOF
 docker_up() { docker version --format '{{.Server.Version}}' >/dev/null 2>&1; }
 DOCKER_DOWN="cannot reach the Docker server: start OrbStack. From Claude, run one bin/sandbox command per Bash call, with no ; && or < redirect (otherwise it runs in Claude's Bash sandbox, which cannot reach Docker)."
 need_docker() {
-  command -v docker >/dev/null 2>&1 || die "docker not found; install OrbStack (README Phase 1 / Task 1)"
+  command -v docker >/dev/null 2>&1 || die "docker not found; install OrbStack (FIRST-INSTALLATION.md, Task 1)"
   docker_up || die "$DOCKER_DOWN"
 }
 need_image() {
@@ -122,7 +122,7 @@ cmd_new() {
   echo "Created jt-$firm. Next: ask Claude \"scan $firm\" (writes work/$firm/scan.md)."
 }
 
-# README Phase 3 / Task 2: read commands only, and no way to start a program from the repo.
+# docs/reference.md, Phase 2 / Task 2: read commands only, and no way to start a program from the repo.
 check_scan_command() {
   local a
   case "$1" in
@@ -279,7 +279,7 @@ cmd_export() {
     fi
     mv "$out/$firm.$ext.tmp" "$out/$firm.$ext"
   done
-  echo "Wrote $out/$firm.bundle and $out/$firm.zip. Send or push them yourself (README Phase 5 / Task 2)."
+  echo "Wrote $out/$firm.bundle and $out/$firm.zip. Send or push them yourself (docs/reference.md, Phase 4 / Task 2)."
 }
 
 cmd_rm() {
@@ -301,7 +301,7 @@ cmd_rm() {
 }
 
 # Claude may touch test code only while the guard hook is registered in this repo's settings
-# (README: Guardrails). Claude Code sets CLAUDECODE=1 for the commands it runs; your own
+# (docs/reference.md: Guardrails). Claude Code sets CLAUDECODE=1 for the commands it runs; your own
 # terminal does not, so this never blocks you.
 SETTINGS="${SANDBOX_SETTINGS:-$ROOT/.claude/settings.json}"
 guard_on() { [ -f "$SETTINGS" ] && grep -q '\.claude/hooks/guard\.sh' "$SETTINGS"; }

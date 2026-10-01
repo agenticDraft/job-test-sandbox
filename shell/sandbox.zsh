@@ -46,7 +46,7 @@ docker() {
   command docker "$@"
 }
 
-# Switch the Claude guard hook of this repo on and off (README: Guardrails, "Scope, on and
+# Switch the Claude guard hook of this repo on and off (docs/reference.md: Guardrails, "Scope, on and
 # off"). Works from any directory; touches only this repo's .claude/settings.json.
 _jts_claude() { print -r -- "${JTS_CLAUDE_DIR:-$JTS_ROOT/.claude}"; }
 guard-status() {

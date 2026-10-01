@@ -1,7 +1,9 @@
 # Per-company scan reports and exports: they show where you applied
 work/
+docs/superpowers
 
 # Local artifact sources (published to claude.ai, not part of the repo)
 .claude/artifacts/
 
 .DS_Store
+.history
