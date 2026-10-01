@@ -41,7 +41,7 @@ box it runs in.**
  Browser ── 127.0.0.1:8443 (code-server), 127.0.0.1:5173 (the app) ──▶ container jt-<firm>
 ```
 
-- **`job-sandbox:base` image** — Node 24, git, unzip, code-server; runs as user `dev`,
+- **`job-sandbox:base` image** — Node 24, git, unzip, curl, code-server; runs as user `dev`,
   not root. This is the "boilerplate you never touch". It is built once and only rebuilt
   on purpose (Node or code-server update).
 - **`jt-<firm>` volume** — the test's code lives here and **never on the Mac disk**.
@@ -170,13 +170,14 @@ allowlist is refused with a message.
 
 - Checks only `docker run|create` calls that mention `jt-` or `job-sandbox`, up to the image
   name. It refuses bind mounts (`-v /…`, `-v/…`, `--volume=…`, `--mount type=bind`),
-  `docker.sock`, `--privileged` and ports not bound to `127.0.0.1`. The message names the
-  matching `sandbox` command.
+  `docker.sock`, `--privileged` and ports not bound to `127.0.0.1`. The message points to
+  `bin/sandbox help` and mentions the `command docker` override.
 - Inside this repo it warns (does not block) on `git clone` and `unzip`.
 - **Escape hatch:** `command docker …` bypasses the guard on purpose.
 
 **Statusline** — Claude's status line shows `🛡 sandbox: <firm> · <verdict> · <running|stopped>`,
-or `🛡 sandbox: none` / `🛡 sandbox: docker not installed`.
+or `🛡 sandbox: none` / `🛡 sandbox: docker not installed`. With more than one project it
+shows the running one (else the first) and adds ` (+N)`.
 
 ## Phase 1 — One-time setup
 
@@ -216,7 +217,9 @@ source ~/github/agenticDraft/job-test-sandbox/shell/sandbox.zsh
 
 It defines a `sandbox` function (so the command works from any directory) and a `docker`
 wrapper that only looks at `docker run|create` calls naming `jt-` or `job-sandbox`; every
-other `docker` call passes through unchanged. See Guardrails / Layer 3.
+other `docker` call passes through unchanged. It also warns (does not block) on `git clone`
+and `unzip` inside this repo, and puts the prompt marker `🛡 MAC · job-test-sandbox` on the
+prompt while you are in this repo. See Guardrails / Layer 3.
 
 ## Phase 2 — New project intake
 
@@ -281,7 +284,8 @@ Allowed read commands: `ls`, `find`, `cat`, `head`, `tail`, `grep`, `wc`, `file`
 `git log`, `git show`. `awk` is not allowed (it can run programs), `find` refuses
 `-exec`, `-execdir`, `-ok`, `-okdir`, `-delete`, `-fprint*` and `-fls`, and `git` refuses
 `--ext-diff`, `--textconv`, `--show-signature`, `--output`, `--exec`, `-c` and `%G` formats
-and always runs with the repo's own git config switched off. No network, no writes, and the container is gone after each
+and always runs with `core.fsmonitor`, `core.hooksPath`, `diff.external`, `core.pager`,
+`gpg.program` and `core.attributesFile` overridden, plus `--no-ext-diff --no-textconv`. No network, no writes, and the container is gone after each
 command. Claude does not run `npm`, `node`, any script from the repo, or anything outside
 `sandbox scan` for that project.
 
@@ -300,7 +304,7 @@ finding, never followed.
    `.vscode/settings.json`, `.devcontainer/`, `.idea/`, `.husky/`, `.gitmodules`.
 4. **Config files that execute** — `vite`, `next`, `tailwind`, `postcss`, `babel`,
    `eslint`, `jest`/`vitest` configs and any server entry: lines longer than ~300 characters
-   (`grep -nE '.{300}'`), `eval`, `new Function`, `child_process`, `require('os'|'fs'|'http')`
+   (`sandbox scan acme wc -L <file>` per file; GNU `wc -L` prints the longest line), `eval`, `new Function`, `child_process`, `require('os'|'fs'|'http')`
    in frontend config, `Buffer.from(..., 'base64')`, `atob`, `String.fromCharCode` chains,
    `fetch`/`axios` to hosts the app has no reason to call, reads of `process.env`,
    `~/.ssh`, `Library/Application Support`, browser `Login Data`, wallet paths.
@@ -382,7 +386,7 @@ Commit your work in the code-server terminal.
 
 ### Task 2 — Export or push
 
-Option A, export to the Mac as text and archives (recommended):
+Export (recommended), to the Mac as text and archives:
 
 ```bash
 sandbox export acme
@@ -398,7 +402,7 @@ Send the zip, or push the bundle from the Mac **in a terminal only**:
 `git clone acme.bundle tmp && cd tmp && git push <their-remote>`. Cloning a bundle does not
 run anything, but do not open that folder in an editor or run npm in it.
 
-Option B, push from inside the container with a fine-grained token limited to that one
+Push, from inside the container with a fine-grained token limited to that one
 repo, typed when git prompts and not stored (`git config --global credential.helper` stays
 unset).
 
