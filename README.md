@@ -62,6 +62,119 @@ unzip, no double-click on the zip.
 The scan always comes **after** the code is in the sandbox (step 2) and **before** anything
 runs (step 5). `sandbox up` refuses without a Green verdict.
 
+### Docker in one minute (if this is your first time)
+
+You do not start OrbStack per step, and you do nothing inside OrbStack. It only has to be
+running in the background; everything else is the `sandbox` command or Claude.
+
+- **OrbStack** is the app that keeps a small Linux on the Mac; Docker runs in that Linux.
+  While its icon is in the menu bar (top right), Docker is running.
+- **Volume** `jt-firma` is a private disk inside that Linux. The test's code lives there,
+  never on the Mac disk.
+- **Container** `jt-firma` is a small isolated machine that sees only that volume. code-server
+  (VS Code in the browser) and the test app run in it.
+- **`sandbox`** is our command that creates and starts all of this for you. You never type
+  `docker` commands yourself.
+
+In OrbStack you do two things only: once, turn off "Expose ports to LAN" (Phase 1 / Task 2),
+and keep it running. Its window can show the volume and the container (Volumes,
+Containers), but you need not touch them.
+
+### Example: a new test arrives as a zip
+
+You received `firma.zip` by email. You choose the project name: lowercase letters, digits
+and dashes, here `firma`.
+
+**Step 0 — OrbStack is running.** 🖥 Look at the menu bar. No OrbStack icon → Cmd+Space,
+"OrbStack", Enter. Check:
+
+```bash
+sandbox status
+```
+
+"No projects…" or a list → Docker works. "cannot reach the Docker server" → OrbStack is not
+running.
+
+**Step 1 — The guard is on.** 🖥
+
+```bash
+guard-status    # must say: guard is on   (if off: guard-on)
+```
+
+**Step 2 — Save the zip, do not open it.** Keep it at `~/Downloads/firma.zip`. No
+double-click, no unzip.
+
+**Step 3 — Put the zip into the sandbox.** 🖥 you, in the terminal (Claude may not do this:
+the guard refuses `~/Downloads`):
+
+```bash
+sandbox new firma ~/Downloads/firma.zip
+```
+
+It prints `Created jt-firma. Next: ask Claude "scan firma"…`. What happened: Docker created
+the volume `jt-firma`, the zip was sent into it and unpacked there, and a git repo was made
+from it. Nothing from the zip ran, and nothing was unpacked on the Mac. In OrbStack you can
+see `jt-firma` under Volumes; nothing to do there.
+
+**Step 4 — Scan.** 🖥 start Claude in this repo:
+
+```bash
+cd ~/github/agenticDraft/job-test-sandbox && claude
+```
+
+💬 Type: **"scan firma"**. Claude reads the code inside the sandbox (no network, read-only)
+and writes `work/firma/scan.md`. Approve its command prompts. At the end it gives the verdict:
+
+- **Green** → go on.
+- **Question** → read `work/firma/scan.md`; you decide.
+- **Red** → 💬 "remove firma"; run nothing.
+
+**Step 5 — Start the work container** (after Green). 🖥
+
+```bash
+sandbox up firma
+```
+
+or 💬 "start firma". It prints a password (also in `work/firma/password`). In OrbStack
+`jt-firma` now shows under Containers as running.
+
+**Step 6 — Work.** 🌐 and 🧪
+
+1. 🌐 In the `sandbox` Chrome profile open `http://127.0.0.1:8443` and enter the password.
+2. 🧪 In code-server open a terminal (☰ → Terminal → New Terminal). The prompt must be
+   `🧪 SANDBOX firma`.
+3. 🧪 In that terminal:
+
+   ```bash
+   npm ci
+   npm run dev -- --host 0.0.0.0
+   ```
+
+4. 🌐 Open the app in the same profile at `http://127.0.0.1:5173`.
+5. 🧪 Write code in code-server. 💬 Claude helps when you ask, for example "run the tests in
+   firma".
+
+If the zip keeps everything in one folder (no `package.json` at the top), first `cd` into
+that folder in the code-server terminal.
+
+**Step 7 — End of the day.** 🖥 `sandbox stop firma`. Next day `sandbox up firma`; your work
+stays in the volume.
+
+**Step 8 — Hand in.**
+
+1. 🧪 In the code-server terminal:
+
+   ```bash
+   git add -A
+   git commit -m "Solution"
+   ```
+
+2. 🖥 On the Mac: `sandbox export firma`. You get `work/firma/out/firma.zip`; send that zip
+   to the company by email.
+
+**Step 9 — Clean up.** 🖥 `sandbox rm firma` (type `firma` to confirm). When you no longer need
+the record, delete `work/firma/` too.
+
 ## Why
 
 Fake "coding test" repos are a known malware delivery channel aimed at developers (the
