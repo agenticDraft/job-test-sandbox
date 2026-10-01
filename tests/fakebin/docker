@@ -1,0 +1,22 @@
+#!/bin/bash
+# Test double for docker (tests only). Logs every call and answers the queries bin/sandbox makes.
+echo "$*" >> "${FAKE_DOCKER_LOG:?FAKE_DOCKER_LOG not set}"
+has() { local x; for x in $1; do [ "$x" = "$2" ] && return 0; done; return 1; }
+last="${!#}"
+case "$1" in
+  version) [ -z "${FAKE_DOCKER_DOWN:-}" ] && echo 29.0.0; [ -z "${FAKE_DOCKER_DOWN:-}" ]; exit $? ;;
+  image) has "$FAKE_DOCKER_IMAGES" "$last"; exit $? ;;
+  volume)
+    case "$2" in
+      inspect) has "$FAKE_DOCKER_VOLUMES" "$last"; exit $? ;;
+      ls) for v in $FAKE_DOCKER_VOLUMES; do echo "$v"; done; exit 0 ;;
+      *) exit 0 ;;
+    esac ;;
+  container)
+    if has "$FAKE_DOCKER_RUNNING" "$last"; then echo true; exit 0; fi
+    if has "$FAKE_DOCKER_STOPPED" "$last"; then echo false; exit 0; fi
+    echo "Error: No such container: $last" >&2; exit 1 ;;
+esac
+case " $* " in *" -i "*) cat > "${FAKE_DOCKER_STDIN:-/dev/null}" ;; esac
+case "$*" in *"git bundle"*|*"git archive"*) echo FAKE-OUTPUT ;; esac
+exit "${FAKE_DOCKER_EXIT:-0}"
