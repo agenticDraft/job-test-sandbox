@@ -29,8 +29,8 @@ runbook; read it before changing anything.
   `Verdict: Question` or `Verdict: Red` (README Phase 3 / Task 4); `sandbox up` reads it.
 - `.claude/hooks/guard.sh` is edited by Zoran only.
 - Commit with plain `-m` messages, for example
-  `git commit -m "Add scan for acme" -m "Claude-Session: https://claude.ai/code/session_..."`;
-  no `$(...)` or heredocs, the guard denies them.
+  `git commit -m "Add scan for acme" -m "Claude-Session: https://claude.ai/code/session_ID"`
+  (ID is the real session id); no `$(...)` or heredocs, the guard denies them.
 - Commit messages must be plain ASCII words (no `..`, no word in the message starting with
   `-`, no absolute paths, no non-ASCII), because the guard checks every word of the command.
 - `work/` is private (it reveals where Zoran applied) and must stay gitignored.
