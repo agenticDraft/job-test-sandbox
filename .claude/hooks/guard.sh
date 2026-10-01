@@ -56,7 +56,13 @@ check_segment() {
   w1="$1"; w2="${2:-}"
   case "$w1" in
     bin/sandbox|./bin/sandbox|"$root/bin/sandbox")
-      [ "$w2" = rm ] && WANTS_ASK=1
+      [ "$w2" = rm ] && WANTS_ASK="sandbox rm deletes the project volume and any work not exported. Confirm?"
+      if [ "$w2" = up ]; then
+        for word in "$@"; do
+          [ "$word" = --accept-question ] &&
+            WANTS_ASK="sandbox up --accept-question runs code whose scan verdict is Question. Confirm?"
+        done
+      fi
       return 0 ;;
     tests/run.sh|./tests/run.sh|"$root/tests/run.sh")
       shift
@@ -103,13 +109,13 @@ check_bash() {
   while IFS= read -r seg; do
     check_segment "$seg"
   done < <(printf '%s\n' "$rest" | awk '{ gsub(/&&|\|\||[;|&]/, "\n"); print }')
-  [ -n "$WANTS_ASK" ] && ask "sandbox rm deletes the project volume and any work not exported. Confirm?"
+  [ -n "$WANTS_ASK" ] && ask "$WANTS_ASK"
   exit 0
 }
 
 check_file_tool() {
   local p mode=read
-  case "$tool" in Edit|Write|NotebookEdit) mode=write ;; esac
+  case "$tool" in Edit|MultiEdit|Write|NotebookEdit) mode=write ;; esac
   local key
   case "$tool" in
     NotebookEdit) key=notebook_path ;;
@@ -137,6 +143,10 @@ check_file_tool() {
 
 case "$tool" in
   Bash) check_bash ;;
-  Read|Edit|Write|NotebookEdit|Grep|Glob) check_file_tool ;;
+  Read|Edit|MultiEdit|Write|NotebookEdit|Grep|Glob) check_file_tool ;;
+  # These cannot run Mac programs or touch files.
+  Agent|Task|Skill|ToolSearch|TodoWrite|TaskCreate|TaskUpdate|TaskList|TaskGet|AskUserQuestion|\
+  WebFetch|WebSearch|Artifact|ArtifactComments|ArtifactData|SendMessage|ListAgents|EnterPlanMode|\
+  ExitPlanMode|TaskStop|TaskOutput|ReadNotifications) exit 0 ;;
+  *) deny "tool $tool is not allowed in this repo while the guard is active; turn the hook off to use it." ;;
 esac
-exit 0

@@ -60,7 +60,24 @@ assert_eq "rm from Claude: exit 0" 0 "$CODE"
 assert_contains "rm from Claude: forces a prompt" '"permissionDecision": "ask"' "$OUT"
 
 hook WebFetch '{"url":"https://example.com"}'
-assert_eq "other tools pass through" 0 "$CODE"
+assert_eq "known safe tool allowed: WebFetch" 0 "$CODE"
+for t in Monitor mcp__ide__executeCode mcp__plugin_playwright_playwright__browser_run_code_unsafe \
+  mcp__claude-in-chrome__javascript_tool KillShell BashOutput FooTool; do
+  hook "$t" '{"command":"id"}'
+  assert_eq "unknown tool denied: $t" 2 "$CODE"
+done
+hook FooTool '{}'
+assert_contains "unknown tool denial names the tool" "tool FooTool is not allowed" "$OUT"
+hook MultiEdit '{"file_path":"/fake/repo/bin/sandbox","edits":[]}'
+assert_eq "MultiEdit on bin/sandbox denied" 2 "$CODE"
+hook MultiEdit '{"file_path":"/fake/repo/work/x","edits":[]}'
+assert_eq "MultiEdit on work/x allowed" 0 "$CODE"
+
+bash_cmd 'bin/sandbox up acme --accept-question'
+assert_eq "up --accept-question from Claude: exit 0" 0 "$CODE"
+assert_contains "up --accept-question from Claude: forces a prompt" '"permissionDecision": "ask"' "$OUT"
+bash_cmd 'bin/sandbox up acme'
+assert_not_contains "plain up: no prompt" '"ask"' "$OUT"
 
 denies 'cat $HOME/.ssh/id_rsa'
 denies 'cat \/etc/passwd'
