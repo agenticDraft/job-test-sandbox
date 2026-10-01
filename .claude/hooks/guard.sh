@@ -107,7 +107,27 @@ check_bash() {
   exit 0
 }
 
+check_file_tool() {
+  local p mode=read
+  p="$(field '.tool_input.file_path // .tool_input.notebook_path // .tool_input.path')"
+  case "$tool" in Edit|Write|NotebookEdit) mode=write ;; esac
+  [ -z "$p" ] && exit 0
+  path_ok "$p" "$mode" ||
+    deny "$tool outside this repo is not allowed ($p). Test code is read only through: bin/sandbox scan <firm> <read command>"
+  if [ "$mode" = write ]; then
+    case "$p" in /*) ;; "~"*) p="$HOME${p#\~}" ;; *) p="$root/$p" ;; esac
+    if inside "$p" "$root"; then
+      case "$p" in
+        "$root"/work/*|"$root"/docs/*|"$root"/README.md|"$root"/CLAUDE.md) ;;
+        *) deny "while the guard is active Claude writes only work/, docs/, README.md and CLAUDE.md in this repo; scripts, tests, .claude/ and .git/ are edited by you ($p)." ;;
+      esac
+    fi
+  fi
+  exit 0
+}
+
 case "$tool" in
   Bash) check_bash ;;
+  Read|Edit|Write|NotebookEdit|Grep|Glob) check_file_tool ;;
 esac
 exit 0
