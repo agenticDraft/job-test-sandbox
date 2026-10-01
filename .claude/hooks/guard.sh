@@ -37,7 +37,7 @@ path_ok() {
   return 1
 }
 
-READ_ONLY=" ls cat head tail grep wc sort uniq jq echo printf pwd date diff file mkdir test true "
+READ_ONLY=" ls cat head tail grep wc jq echo printf pwd date diff file mkdir test true "
 GIT_OK=" status diff log show add commit branch rev-parse ls-files restore stash grep blame "
 
 check_segment() {
@@ -60,12 +60,19 @@ check_segment() {
     tests/run.sh|./tests/run.sh|"$root/tests/run.sh") return 0 ;;
     git)
       [ "$w2" = push ] && deny "git push is yours to run, not Claude's."
-      case "$GIT_OK" in *" $w2 "*) return 0 ;; esac
-      deny "git $w2 is not allowed here (no push, clone, fetch, config or -c). Allowed:$GIT_OK" ;;
+      case "$GIT_OK" in *" $w2 "*) ;; *)
+        deny "git $w2 is not allowed here (no push, clone, fetch, config or -c). Allowed:$GIT_OK" ;; esac
+      for word in "$@"; do
+        case "$word" in
+          -O*|--open-files-in-pager*|--output*|--ext-diff*|--textconv*|--exec*|--upload-pack*|--receive-pack*)
+            deny "git option $word can run a program or write files." ;;
+        esac
+      done
+      return 0 ;;
     cd) return 0 ;;  # the target was checked as a path above; relative targets stay in the repo
     find)
       for word in "$@"; do
-        case "$word" in -exec|-execdir|-ok|-okdir|-delete) deny "find $word is not allowed." ;; esac
+        case "$word" in -exec|-execdir|-ok|-okdir|-delete|-fprint|-fprint0|-fprintf|-fls) deny "find $word is not allowed." ;; esac
       done
       return 0 ;;
     docker) deny "use bin/sandbox instead of docker (for example: bin/sandbox status)." ;;
@@ -82,7 +89,13 @@ check_bash() {
   cmd="$(field .tool_input.command)"
   case "$cmd" in
     *docker.sock*|*--privileged*|*"-v /Users"*) deny "docker.sock, --privileged and -v /Users are never allowed." ;;
-    *'$('*|*'`'*|*'<('*|*'>('*) deny "command substitution is not allowed here; run the parts as separate commands." ;;
+    *'$'*|*'`'*|*'\'*|*'<('*|*'>('*)
+      deny "variables, command substitution and backslash escapes are not allowed here; write the command out literally." ;;
+  esac
+  local redirects
+  redirects="$(printf '%s\n' "$cmd" | awk '{ gsub(/[0-9]*>&[0-9-]*/, ""); gsub(/[0-9]*> *\/dev\/null/, ""); print }')"
+  case "$redirects" in
+    *'>'*) deny "output redirection is not allowed here (only 2>&1 and >/dev/null)." ;;
   esac
   WANTS_ASK=""
   # One segment per simple command. Quotes are not parsed, so ';' or '|' inside quotes

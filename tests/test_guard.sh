@@ -62,4 +62,19 @@ assert_contains "rm from Claude: forces a prompt" '"permissionDecision": "ask"' 
 hook WebFetch '{"url":"https://example.com"}'
 assert_eq "other tools pass through" 0 "$CODE"
 
+denies 'cat $HOME/.ssh/id_rsa'
+denies 'cat \/etc/passwd'
+denies 'echo x > bin/sandbox'
+denies 'echo x >> tests/run.sh'
+denies 'sort -o bin/sandbox README.md'
+denies 'uniq README.md bin/sandbox'
+denies 'find . -fprint bin/x'
+denies 'git grep -Osh x'
+denies 'git grep --open-files-in-pager=sh x'
+denies 'git diff --output=bin/sandbox'
+denies 'git log --ext-diff'
+allows 'ls > /dev/null'
+allows 'git status 2>/dev/null'
+allows 'bin/sandbox scan acme grep -rn postinstall . 2>&1 | head -20'
+
 finish
