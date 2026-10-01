@@ -228,6 +228,37 @@ cmd_apply() {
   docker exec --user dev -w "$PROJECT" "jt-$firm" git diff --stat
 }
 
+cmd_export() {
+  local firm="${1:-}"
+  check_firm "$firm"
+  need_docker; need_image; need_volume "$firm"
+  local out="$WORK/$firm/out"
+  mkdir -p "$out"
+  docker run --rm --network none "${HARDEN[@]}" -v "jt-$firm:/src:ro" -w /src "$IMAGE" \
+    git bundle create - --all > "$out/$firm.bundle"
+  docker run --rm --network none "${HARDEN[@]}" -v "jt-$firm:/src:ro" -w /src "$IMAGE" \
+    git archive --format=zip HEAD > "$out/$firm.zip"
+  echo "Wrote $out/$firm.bundle and $out/$firm.zip. Send or push them yourself (README Phase 5 / Task 2)."
+}
+
+cmd_rm() {
+  local firm="${1:-}" yes="${2:-}"
+  check_firm "$firm"
+  need_docker
+  local state
+  state="$(container_state "$firm")"
+  if [ "$state" = missing ] && ! volume_exists "$firm"; then die "nothing to remove for $firm"; fi
+  if [ "$yes" != --yes ]; then
+    [ -t 0 ] || die "confirm with: sandbox rm $firm --yes"
+    local answer
+    read -r -p "Delete container and volume jt-$firm? Work not exported is lost. Type '$firm': " answer
+    [ "$answer" = "$firm" ] || die "not confirmed; nothing removed"
+  fi
+  if [ "$state" != missing ]; then docker rm -f "jt-$firm" >/dev/null; fi
+  if volume_exists "$firm"; then docker volume rm "jt-$firm" >/dev/null; fi
+  echo "Removed jt-$firm. work/$firm/ is kept; delete it yourself when you no longer need it."
+}
+
 cmd="${1:-}"
 if [ $# -gt 0 ]; then shift; fi
 case "$cmd" in
