@@ -1,0 +1,23 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "/bin/bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/guard.sh\"" }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": ["Bash(bin/sandbox status)", "Bash(bin/sandbox status *)", "Bash(bin/sandbox scan *)", "Bash(tests/run.sh)", "Bash(tests/run.sh *)"],
+    "deny": ["Monitor", "Bash(docker *)", "Bash(npm *)", "Bash(npx *)", "Bash(node *)", "Bash(curl *)", "Bash(wget *)", "Bash(git push)", "Bash(git push *)"]
+  },
+  "sandbox": {
+    "excludedCommands": ["bin/sandbox *", "./bin/sandbox *"]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "/bin/bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/statusline.sh\""
+  }
+}
