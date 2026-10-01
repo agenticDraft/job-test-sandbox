@@ -12,7 +12,9 @@ their code touch the Mac.
 ## Documents
 
 - `FIRST-INSTALLATION.md` — one-time setup and its verification.
-- `USER-GUIDE.md` — every command and step: who does what.
+- `USER-GUIDE.md` — what you do every time: your commands and a new test step by step.
+- `docs/reference.md` — every `sandbox` subcommand, the guard rules in full, and each step with
+  the raw `docker` command it runs.
 - `CLAUDE.md` — rules for Claude in this repo.
 - `docs/superpowers/` — design spec and plan.
 
@@ -69,12 +71,12 @@ The image itself is never copied or changed.
 6. **Use Docker containers only, not OrbStack "machines".** Machines see Mac files at
    `/mnt/mac` by default; containers do not.
 7. **Claude never starts inside a test repo** and never runs anything from it (see
-   USER-GUIDE.md, Phase 2).
+   docs/reference.md, Phase 2).
 
 ## Guardrails
 
 Three layers plus two always-on pieces, each scoped so normal work outside this repo and its
-containers is untouched. Details: USER-GUIDE.md, Guardrails.
+containers is untouched. Details: docs/reference.md, Guardrails.
 
 - **Claude guard** (`.claude/hooks/guard.sh`, the real boundary): strict allowlist for Claude's
   tools, applied only when Claude Code runs in this repo. On while `.claude/settings.json`
@@ -104,4 +106,4 @@ containers is untouched. Details: USER-GUIDE.md, Guardrails.
   (FIRST-INSTALLATION.md, Task 4) keeps it away from your real sessions.
 - **VM or kernel escape.** Breaking out of the container and the OrbStack VM is possible
   in theory and rare in practice. Keep OrbStack updated.
-- **Scan misses.** See USER-GUIDE.md, Phase 2 / Task 4; the container, not the scan, is the boundary.
+- **Scan misses.** See docs/reference.md, Phase 2 / Task 4; the container, not the scan, is the boundary.

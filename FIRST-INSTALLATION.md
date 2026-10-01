@@ -82,12 +82,12 @@ source ~/github/agenticDraft/job-test-sandbox/shell/sandbox.zsh
 ```
 
 It defines a `sandbox` function (so the command works from any directory), `guard-on` /
-`guard-off` / `guard-status` for the Claude guard (USER-GUIDE.md, Guardrails, "Scope, on and off"), a `claude`
+`guard-off` / `guard-status` for the Claude guard (docs/reference.md, Guardrails, "Scope, on and off"), a `claude`
 wrapper that switches the guard on before Claude Code starts in this repo, and a `docker`
 wrapper that only looks at `docker run|create` calls naming `jt-` or `job-sandbox`; every
 other `docker` call passes through unchanged. Inside this repo it blocks `git clone`, `unzip`
 and `open` of an archive (override: `command git clone …`), and puts the prompt marker
-`🛡 MAC · job-test-sandbox` on the prompt while you are in this repo. See USER-GUIDE.md, Guardrails / Layer 3.
+`🛡 MAC · job-test-sandbox` on the prompt while you are in this repo. See docs/reference.md, Guardrails / Layer 3.
 
 ## Task 6 — Keep Claude from cloning or unpacking, always
 
