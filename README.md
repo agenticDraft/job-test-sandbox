@@ -23,6 +23,7 @@ Code type them with `!` in front, for example `! guard-status`.
 | `guard-status` | Shows whether Claude's guard is on. Must say "guard is on" before you work on a test. |
 | `guard-on` | Switches the guard on. This is the normal state; you need it only after `guard-off`. |
 | `guard-off` | Switches the guard off, **only** to let Claude edit `bin/`, `tests/` or `.claude/`. Never work on a test like this. |
+| `claude` | In this repo, switches the guard on first, then starts Claude Code. For maintenance: `guard-off`, then `command claude`. |
 | `sandbox <command>` | The sandbox itself: `new`, `scan`, `up`, `stop`, `exec`, `apply`, `export`, `rm`, `status`, `build`. |
 
 If Claude Code's `!` does not know `guard-on`, use the plain form:
@@ -357,6 +358,10 @@ on the allowlist is refused with a message.
   `! mv .claude/settings.json.off .claude/settings.json` (and the reverse to switch off). The
   same file also holds the statusline and the Bash-sandbox exception for `bin/sandbox`, so
   those go off and on with it. The intake hook (Phase 1 / Task 6) stays on either way.
+- **Back on at every start.** 🖥 `claude` started anywhere inside this repo runs `guard-on`
+  first, so a forgotten `guard-off` never carries into a new session. It is a zsh function,
+  not a Claude Code hook, because it must run before Claude Code reads its settings. To start
+  a maintenance session with the guard off: 🖥 `guard-off`, then `command claude`.
 - **Check.** 💬 "run cat /etc/hosts". With the guard on it is refused with
   "Blocked by the job-test-sandbox guard".
 - **Safety net.** While the guard is off, `bin/sandbox` refuses `new`, `scan`, `up`, `exec`,
@@ -488,7 +493,8 @@ source ~/github/agenticDraft/job-test-sandbox/shell/sandbox.zsh
 ```
 
 It defines a `sandbox` function (so the command works from any directory), `guard-on` /
-`guard-off` / `guard-status` for the Claude guard (Guardrails, "Scope, on and off"), and a `docker`
+`guard-off` / `guard-status` for the Claude guard (Guardrails, "Scope, on and off"), a `claude`
+wrapper that switches the guard on before Claude Code starts in this repo, and a `docker`
 wrapper that only looks at `docker run|create` calls naming `jt-` or `job-sandbox`; every
 other `docker` call passes through unchanged. Inside this repo it blocks `git clone`, `unzip`
 and `open` of an archive (override: `command git clone …`), and puts the prompt marker

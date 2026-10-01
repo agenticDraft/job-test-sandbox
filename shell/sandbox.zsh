@@ -71,6 +71,16 @@ guard-off() {
 
 _jts_in_repo() { [[ "$PWD" == "$JTS_ROOT" || "$PWD" == "$JTS_ROOT"/* ]]; }
 
+# Starting Claude Code in this repo switches the guard on first, so a forgotten guard-off
+# never carries into a new session. It has to happen here, before Claude Code reads its
+# settings. Deliberate override for maintenance: `command claude …` after guard-off.
+claude() {
+  if _jts_in_repo && [[ ! -f "$(_jts_claude)/settings.json" ]]; then
+    guard-on || return
+  fi
+  command claude "$@"
+}
+
 # Inside this repo, test code never lands on the Mac: clone, unzip and opening an archive are
 # blocked here. Deliberate override: `command git clone …`, `command unzip …`, `command open …`.
 _jts_block() {
