@@ -2,8 +2,7 @@
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$ROOT/tests/lib.sh"
 setup() {
-  T="$TMPDIR/sandbox-test-$$"
-  mkdir -p "$T"
+  T="$(mktemp -d "${TMPDIR:-/tmp}/sandbox-test.XXXXXX")"
   export FAKE_DOCKER_LOG="$T/docker.log"; : > "$FAKE_DOCKER_LOG"
   export FAKE_DOCKER_STDIN="$T/stdin"
   export SANDBOX_WORK_DIR="$T/work"
