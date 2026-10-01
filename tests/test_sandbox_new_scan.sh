@@ -19,6 +19,8 @@ run new acme "$T/acme.zip"
 assert_eq "new from zip: exit 0" 0 "$CODE"
 assert_contains "zip streamed via stdin" "run --rm -i --user dev" "$(log)"
 assert_eq "zip bytes reached the container" "PK-fake-zip" "$(cat "$FAKE_DOCKER_STDIN")"
+assert_contains "zip unpacked and committed when it has no .git" \
+  "run --rm -i --user dev --cap-drop=ALL --security-opt no-new-privileges -v jt-acme:/home/dev/project -w /home/dev/project job-sandbox:base sh -c cat > /tmp/t.zip && unzip -q /tmp/t.zip -d /home/dev/project && if [ ! -d .git ]; then git init -q && git add -A && git -c user.name=sandbox -c user.email=sandbox@localhost commit -qm 'Import from zip'; fi" "$(log)"
 
 setup
 run new acme git@github.com:acme/test.git

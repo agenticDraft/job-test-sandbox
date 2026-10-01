@@ -11,6 +11,13 @@ assert_contains "zip made from HEAD" "git archive --format=zip HEAD" "$(log)"
 assert_eq "bundle written" FAKE-OUTPUT "$(cat "$SANDBOX_WORK_DIR/acme/out/acme.bundle")"
 assert_eq "zip written" FAKE-OUTPUT "$(cat "$SANDBOX_WORK_DIR/acme/out/acme.zip")"
 
+rm -f "$SANDBOX_WORK_DIR/acme/out/"*
+export FAKE_DOCKER_EXIT=1
+run export acme
+assert_eq "failed export: exit 1" 1 "$CODE"
+assert_eq "failed export: no files left" "" "$(ls "$SANDBOX_WORK_DIR/acme/out")"
+export FAKE_DOCKER_EXIT=0
+
 export FAKE_DOCKER_STOPPED="jt-acme"
 run rm acme
 assert_eq "rm without a terminal needs --yes" 1 "$CODE"

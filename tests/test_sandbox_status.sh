@@ -4,6 +4,7 @@ setup
 run
 assert_eq "no args: exit 0" 0 "$CODE"
 assert_contains "no args: usage lists status" "status [firm] [--short]" "$OUT"
+assert_contains "no args: usage lists stop" "stop <firm>" "$OUT"
 run bogus
 assert_eq "unknown command: exit 2" 2 "$CODE"
 
