@@ -4,9 +4,9 @@ Run take-home tests (small React apps and similar) from unknown companies withou
 their code touch the Mac.
 
 > **Status:** `bin/sandbox`, the Claude guard hook, the statusline, the Mac zsh guard and
-> `boilerplate/Dockerfile` are written and tested against a fake `docker`. **Nothing has run on
-> real Docker yet** (OrbStack is not installed). Phase 7 and the checks in
-> `docs/superpowers/plans/2026-10-01-sandbox-ux.md` (Phase 6) are the real tests. Every step
+> `boilerplate/Dockerfile` are tested against a fake `docker` and checked on real Docker
+> (OrbStack): Phase 7 and the checks in `docs/superpowers/plans/2026-10-01-sandbox-ux.md`
+> (Phase 6) passed, except `npm rebuild` (needs a project with esbuild). Every step
 > below shows, under "what it runs for you (do not type)", the raw `docker` command that
 > `sandbox` runs. You type only the `sandbox …` line; the rest is there so you can see what
 > happens, or do it by hand if `bin/sandbox` ever fails.
@@ -221,8 +221,9 @@ precisely.
 
    It may first print "Auto-updating Homebrew..." and pause; that is normal. It ends with
    `orbstack was successfully installed!`.
-3. Start it once: Cmd+Space, type "OrbStack", Enter (or `open -a OrbStack`). Finish the
-   first-run setup. While its menu bar icon is there, Docker is running; there is no
+3. Start it once: Cmd+Space, type "OrbStack", Enter (or `open -a OrbStack`). On "What do
+   you want to use?" choose **Docker**, not Linux (a Linux machine sees Mac files, Rule 6)
+   and not Kubernetes. While its menu bar icon is there, Docker is running; there is no
    separate Docker app to start.
 4. Check, in a new terminal:
 

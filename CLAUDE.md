@@ -5,9 +5,9 @@ runbook; read it before changing anything.
 
 ## Status (2026-10-01)
 
-- Written and tested against a fake `docker`: `bin/sandbox`, the guard hook
+- Built and checked on real Docker (OrbStack): `bin/sandbox`, the guard hook
   (`.claude/hooks/guard.sh`), statusline, `shell/sandbox.zsh`, `boilerplate/Dockerfile`.
-  **Not run against real Docker**: OrbStack is not installed on this Mac.
+  Plan Phase 6 and README Phase 7 passed, except the `npm rebuild` check.
 - Not written yet: the `job-test-scan` skill in `.claude/skills/` (create it with the
   `skill-creator` skill).
 - Repo is **public**: https://github.com/agenticDraft/job-test-sandbox. Never commit
