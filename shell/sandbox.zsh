@@ -46,6 +46,29 @@ docker() {
   command docker "$@"
 }
 
+# Switch the Claude guard hook of this repo on and off (README: Guardrails, "Scope, on and
+# off"). Works from any directory; touches only this repo's .claude/settings.json.
+_jts_claude() { print -r -- "${JTS_CLAUDE_DIR:-$JTS_ROOT/.claude}"; }
+guard-status() {
+  local d; d="$(_jts_claude)"
+  if [[ -f "$d/settings.json" ]]; then print "🛡 guard is on"
+  elif [[ -f "$d/settings.json.off" ]]; then print "⚠️  guard is off (guard-on to switch it back)"
+  else print -u2 "🛡 no $d/settings.json or settings.json.off"; return 1; fi
+}
+guard-on() {
+  local d; d="$(_jts_claude)"
+  if [[ -f "$d/settings.json" ]]; then print "🛡 guard is already on"; return 0; fi
+  [[ -f "$d/settings.json.off" ]] || { guard-status; return 1; }
+  command mv "$d/settings.json.off" "$d/settings.json" && guard-status
+}
+guard-off() {
+  local d; d="$(_jts_claude)"
+  if [[ -f "$d/settings.json.off" ]]; then print "⚠️  guard is already off"; return 0; fi
+  [[ -f "$d/settings.json" ]] || { guard-status; return 1; }
+  command mv "$d/settings.json" "$d/settings.json.off" && guard-status &&
+    print "   Only for maintenance. Never work on a test project like this. Back on: guard-on"
+}
+
 _jts_in_repo() { [[ "$PWD" == "$JTS_ROOT" || "$PWD" == "$JTS_ROOT"/* ]]; }
 
 # Inside this repo, test code never lands on the Mac: clone, unzip and opening an archive are

@@ -43,6 +43,19 @@ assert_contains "open block explained" "archives are never opened" "$OUT"
 zr 'git status --short >/dev/null' "$ROOT"
 assert_eq "other git commands in the repo work" 0 "$CODE"
 
+# guard-on / guard-off rename the settings file (a temp copy here, never the real one).
+C="$T/claude"; mkdir -p "$C"; echo '{}' > "$C/settings.json"
+zr "JTS_CLAUDE_DIR='$C'; guard-off; guard-status"
+assert_contains "guard-off switches off" "guard is off" "$OUT"
+assert_eq "guard-off renamed the file" "settings.json.off" "$(ls "$C")"
+zr "JTS_CLAUDE_DIR='$C'; guard-off"
+assert_contains "guard-off twice is harmless" "already off" "$OUT"
+zr "JTS_CLAUDE_DIR='$C'; guard-on; guard-status"
+assert_contains "guard-on switches on" "guard is on" "$OUT"
+assert_eq "guard-on renamed it back" "settings.json" "$(ls "$C")"
+zr "JTS_CLAUDE_DIR='$T/nothing'; guard-on"
+assert_eq "guard-on without any settings file fails" 1 "$CODE"
+
 zr 'sandbox status --short'
 assert_eq "sandbox function runs bin/sandbox" "🛡 sandbox: none" "$OUT"
 

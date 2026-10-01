@@ -75,12 +75,19 @@ The image itself is never copied or changed.
 
 ## Who does what
 
-Every step below is marked with where it happens:
+Every task below starts with a **Who** line: who does it, where, and the exact command or
+sentence. The markers:
 
-- 💬 tell Claude (Claude Code started in this repo)
-- 🖥 Mac terminal, in any directory (the `sandbox` function comes from `shell/sandbox.zsh`)
-- 🧪 code-server terminal or editor, inside the container
-- 🌐 browser, sandbox profile
+- 💬 **Claude** — you type the sentence in Claude Code started in this repo; Claude runs the
+  command shown (`bin/sandbox …`). You only answer its permission prompts.
+- 🖥 **You, Mac terminal** — any directory (the `sandbox` function comes from
+  `shell/sandbox.zsh`). Some steps are yours only: anything with a token, a password, a zip
+  from `~/Downloads` (the guard refuses paths outside this repo), sending to the employer,
+  and switching the guard.
+- 🧪 **You, code-server** — terminal or editor inside the container.
+- 🌐 **You, browser** — the `sandbox` Chrome profile.
+
+When a step says "💬 or 🖥", either works and does the same thing.
 
 **Where am I?** Look at the prompt before typing anything.
 
@@ -92,8 +99,9 @@ Every step below is marked with where it happens:
 ## Daily flow
 
 1. 🌐 Vet the sender (Phase 2 / Task 1). No commands.
-2. 💬 "new test acme `<url>`" or 🖥 `sandbox new acme <https-url|zip>`. A private repo's read
-   token is typed by you in 🖥 when git prompts; Claude never sees it.
+2. Public git repo: 💬 "new test acme `<url>`" or 🖥 `sandbox new acme <https-url>`.
+   Private repo or zip: 🖥 only, `sandbox new acme <https-url|~/Downloads/file.zip>` (you type
+   the token; the guard does not let Claude read `~/Downloads`).
 3. 💬 "scan acme" → Claude writes `work/acme/scan.md` with a `Verdict:` line.
 4. 💬 "status" or 🖥 `sandbox status` → shows the next step.
 5. 💬 "start acme" or 🖥 `sandbox up acme` → refuses without a Green scan.
@@ -106,6 +114,7 @@ Every step below is marked with where it happens:
 10. 💬 "export acme" or 🖥 `sandbox export acme`.
 11. 🖥 Send or push from the Mac yourself. Claude never pushes to an employer's repo.
 12. 💬 "remove acme" or 🖥 `sandbox rm acme` → confirmation required.
+13. 🖥 Delete `work/acme/` yourself when you no longer need the record (`rm -r work/acme`).
 
 ## The sandbox command
 
@@ -168,7 +177,7 @@ Three layers, each scoped so normal work outside this repo and its containers is
 **Layer 1 — Claude hook** (`.claude/hooks/guard.sh`, strict; the real boundary). Anything not
 on the allowlist is refused with a message.
 
-*Scope, on and off.*
+*Scope, on and off.* **Who:** 🖥 you only. Claude cannot switch the guard; it can only remind you.
 
 - **Scope.** The hook is registered in this repo's `.claude/settings.json`, so it applies only
   when Claude Code runs in `job-test-sandbox/`. Claude in your other projects never sees it.
@@ -176,11 +185,15 @@ on the allowlist is refused with a message.
 - **On (the normal state).** `.claude/settings.json` exists. Claude Code loads it
   automatically when it starts in this repo, and picks up the change in a running session
   too.
-- **Off (only to let Claude maintain `bin/`, `tests/` or `.claude/`).** Run
-  `mv .claude/settings.json .claude/settings.json.off`. Turn it back on with
-  `mv .claude/settings.json.off .claude/settings.json`. The same file also holds the
-  statusline and the Bash-sandbox exception for `bin/sandbox`, so those go off and on with it.
-- **Check.** Ask Claude to run `cat /etc/hosts`. With the guard on it is refused with
+- **Off (only to let Claude maintain `bin/`, `tests/` or `.claude/`).** 🖥 `guard-off`; back
+  on with 🖥 `guard-on`; `guard-status` tells which. They work from any directory (functions
+  from `shell/sandbox.zsh`, Phase 1 / Task 5) and only rename this repo's
+  `.claude/settings.json` ↔ `.claude/settings.json.off`. Inside Claude Code type them with
+  `!` (`! guard-on`); if Claude's shell does not know them, use the plain form
+  `! mv .claude/settings.json.off .claude/settings.json` (and the reverse to switch off). The
+  same file also holds the statusline and the Bash-sandbox exception for `bin/sandbox`, so
+  those go off and on with it. The intake hook (Phase 1 / Task 6) stays on either way.
+- **Check.** 💬 "run cat /etc/hosts". With the guard on it is refused with
   "Blocked by the job-test-sandbox guard".
 - **Safety net.** While the guard is off, `bin/sandbox` refuses `new`, `scan`, `up`, `exec`,
   `apply` and `export` when Claude runs them (it sees `CLAUDECODE=1`) with "the guard is off".
@@ -188,6 +201,8 @@ on the allowlist is refused with a message.
   The check reads `.claude/settings.json` for the `guard.sh` hook; it cannot tell whether
   Claude Code actually loaded it (for example if all hooks are disabled in your user
   settings).
+
+*What the guard allows Claude:*
 
 - Bash: one line, run from the repo root (no `cd`), plain characters only (no `$`, backslash,
   globs, braces, parentheses, `~`, `=`), redirection only as `2>&1` or `>/dev/null`.
@@ -218,11 +233,11 @@ on the allowlist is refused with a message.
   `bin/sandbox help` and mentions the `command docker` override.
 - Inside this repo it blocks `git clone`, `unzip` and `open` of an archive
   (`.zip .tar .tgz .gz .7z .rar`); override with `command git clone …` and the like.
+- **Escape hatch:** `command docker …` bypasses the guard on purpose.
 
 **Intake hook for Claude** (`.claude/hooks/no-intake.sh`, registered in
 `.claude/settings.local.json`; Phase 1 / Task 6) — always on, also while the main guard is
 off: no clone, no unpacking, no opening archives.
-- **Escape hatch:** `command docker …` bypasses the guard on purpose.
 
 **Statusline** — Claude's status line shows `🛡 sandbox: <firm> · <verdict> · <running|stopped>`,
 or `🛡 sandbox: none` / `🛡 sandbox: docker not installed`. With more than one project it
@@ -231,6 +246,8 @@ shows the running one (else the first) and adds ` (+N)`.
 ## Phase 1 — One-time setup
 
 ### Task 1 — Install OrbStack
+
+**Who:** 🖥 you, in a normal terminal (it may ask for your Mac password). Claude does nothing here.
 
 Download from orbstack.dev. The free tier is "personal, non-commercial use". Doing a test
 for your own job application reads as personal use, but their page does not define this
@@ -253,19 +270,25 @@ precisely.
 4. Check, in a new terminal:
 
    ```bash
-   command -v docker      # prints a path
-   docker info | head -5  # server details, not "Cannot connect to the Docker daemon"
+   command -v docker                                      # prints a path
+   docker version --format 'server {{.Server.Version}}'  # server version, not "Cannot connect"
    ```
 
 Updates later: `brew upgrade --cask orbstack`.
 
 ### Task 2 — Lock down OrbStack settings
 
+**Who:** 🖥 you, in the OrbStack app (menu bar icon → Settings).
+
 - Docker settings → turn **off** "Expose ports to LAN" (`docker.expose_ports_to_lan`).
   By default, published ports are reachable from other devices on your network.
 - Do not create any OrbStack Linux machines for this.
 
 ### Task 3 — Build the base image
+
+**Who:** 🖥 you: `sandbox build`, or 💬 "build the sandbox image" (Claude runs
+`bin/sandbox build`). Takes a few minutes the first time. Rebuild only on purpose (Node or
+code-server update, or a change in `boilerplate/`).
 
 ```bash
 sandbox build
@@ -275,11 +298,24 @@ docker build -t job-sandbox:base boilerplate
 
 ### Task 4 — Use a separate browser profile
 
-Create a dedicated Chrome profile ("sandbox") with no logins and no password manager.
-You open code-server and the test app in it. The test app's frontend code runs in that
-browser, so it should not share a profile with your email or GitHub session.
+**Who:** 🌐 you, in Chrome. Claude does nothing here.
+
+1. In the address bar open `chrome://profile-picker` → **Add**.
+2. Choose **Stay signed out** (older versions: "Continue without an account"). Do not sign in.
+3. Name it `sandbox` and pick a loud colour (orange).
+4. In that window: Settings → **Autofill and passwords** → turn off saving passwords,
+   addresses and payment methods. Install no extensions and log in to nothing there.
+
+You open code-server and the test app only in this profile. The test app's frontend code
+runs in the browser, so it must not share a profile with your email or GitHub session.
+Incognito is weaker: it can still fill passwords saved in your main profile and runs
+extensions you allowed in incognito.
 
 ### Task 5 — Load the Mac shell guard
+
+**Who:** 🖥 you (`open -t ~/.zshrc`). Claude may not edit files outside this repo. Then open a
+new terminal and check: `cd ~/github/agenticDraft/job-test-sandbox` shows
+`🛡 MAC · job-test-sandbox`, and `sandbox status` answers.
 
 Add one line to `~/.zshrc`, **after** oh-my-zsh is loaded:
 
@@ -287,13 +323,18 @@ Add one line to `~/.zshrc`, **after** oh-my-zsh is loaded:
 source ~/github/agenticDraft/job-test-sandbox/shell/sandbox.zsh
 ```
 
-It defines a `sandbox` function (so the command works from any directory) and a `docker`
+It defines a `sandbox` function (so the command works from any directory), `guard-on` /
+`guard-off` / `guard-status` for the Claude guard (Guardrails, "Scope, on and off"), and a `docker`
 wrapper that only looks at `docker run|create` calls naming `jt-` or `job-sandbox`; every
 other `docker` call passes through unchanged. Inside this repo it blocks `git clone`, `unzip`
 and `open` of an archive (override: `command git clone …`), and puts the prompt marker
 `🛡 MAC · job-test-sandbox` on the prompt while you are in this repo. See Guardrails / Layer 3.
 
 ### Task 6 — Keep Claude from cloning or unpacking, always
+
+**Who:** 🖥 you create `.claude/settings.local.json` (the guard does not let Claude write
+under `.claude/` except `artifacts/`). Then in Claude Code type `/hooks` once (or restart it),
+and check with 💬 "run unzip -l x.zip": it must be refused.
 
 The main guard (`.claude/settings.json`) can be switched off for maintenance. A second,
 always-on hook covers intake: Claude may never run `git clone`, `gh repo clone`, `unzip`,
@@ -326,12 +367,27 @@ is allowed: it streams the zip into the volume without unpacking it on the Mac. 
 
 ### Task 1 — Vet the sender before anything technical
 
+**Who:** 🌐 you. No commands. Optionally 💬 "check the company <name> and repo <url> on the
+web" (Claude may read public pages; it never downloads the code).
+
 Red flags: an unsolicited recruiter, a crypto/web3/"DeFi" company, "just run our repo and
 fix a bug" instead of "build X", urgency, a repo on Bitbucket or a zip from an unknown
 domain, a company you cannot verify outside LinkedIn. Two or more red flags → do not run
 it at all; scan only, then decide.
 
 ### Task 2 — Create the project volume
+
+**Who:**
+
+- Public git repo: 💬 "new test acme https://github.com/acme/frontend-test.git" (Claude runs
+  `bin/sandbox new acme <url>`) or 🖥 you: `sandbox new acme <url>`.
+- Private git repo: 🖥 you only. git asks for a username and a token; you type them, Claude
+  never sees them.
+- Zip: 🖥 you only: `sandbox new acme ~/Downloads/acme-test.zip`. The guard refuses paths
+  outside this repo for Claude, and the intake hook refuses any unpacking.
+
+Do not open, unzip or clone the test anywhere on the Mac first (Rule 1). After this step
+say 💬 "scan acme" (Phase 3).
 
 From a git URL:
 
@@ -370,12 +426,20 @@ first.
 
 ### Task 1 — Ask for the scan
 
+**Who:** 🖥 you start Claude Code in this repo (`cd ~/github/agenticDraft/job-test-sandbox &&
+claude`), check the guard is on (statusline shows `🛡 sandbox: …`), then 💬 "scan acme".
+💬 Claude runs only `bin/sandbox scan acme <read command>`, one per call, and writes
+`work/acme/scan.md`. You read `scan.md` and the verdict Claude reports.
+
 Start Claude Code in **`job-test-sandbox/`** (this repo), never in a test repo, and say:
 "scan job test `acme`". Starting Claude inside the test repo would load that repo's
 `CLAUDE.md`, `.claude/settings.json` (which can contain hooks that run commands) and MCP
 config. Claude Code asks for trust on a new folder, but the safe move is to never be there.
 
 ### Task 2 — How Claude accesses the code
+
+**Who:** 💬 Claude. You can run the same commands yourself in 🖥 (`sandbox scan acme ls`) to
+look at a file.
 
 Only through:
 
@@ -401,6 +465,8 @@ finding, never followed.
 
 ### Task 3 — What Claude checks
 
+**Who:** 💬 Claude, as part of "scan acme".
+
 1. **Install hooks** — `package.json` `scripts`: `preinstall`, `install`, `postinstall`,
    `prepare`, and `pre*` hooks on `dev` / `start` / `build`.
 2. **Dependencies** — unfamiliar or typosquatted names, `git+`, `http(s)`, `file:` or
@@ -420,6 +486,9 @@ finding, never followed.
 
 ### Task 4 — Verdict
 
+**Who:** 💬 Claude writes the verdict; 🖥 you decide on `Question` and on whether to go on at
+all. A `Red` means 💬 "remove acme" or 🖥 `sandbox rm acme`.
+
 Claude writes `work/acme/scan.md` with every finding as `file:line` and one line that is
 exactly `Verdict: Green`, `Verdict: Question` or `Verdict: Red`. `sandbox up` reads that
 line: it refuses without `Green` (`Question` needs `--accept-question`; `Red` or no line
@@ -436,6 +505,14 @@ grep. The container is the real protection, and the scan is the early warning.
 ## Phase 4 — Work on the test
 
 ### Task 1 — Start the work container
+
+**Who:** 💬 "start acme" (Claude runs `bin/sandbox up acme`; for a `Question` verdict it runs
+`bin/sandbox up acme --accept-question` and the hook asks you to confirm) or 🖥 you:
+`sandbox up acme`. Then 🌐 you open `http://127.0.0.1:8443` in the sandbox profile with the
+printed password (also in `work/acme/password`), and check the orange bars and the
+`🧪 SANDBOX acme` prompt in a terminal (menu ☰ → Terminal → New Terminal). Leave
+**Restricted Mode** on until you have read the scan; close the Chat / agent panel and do not
+sign in to it.
 
 ```bash
 sandbox up acme
@@ -460,6 +537,10 @@ side it is bound to `127.0.0.1`. One project runs at a time because the ports ar
 
 ### Task 2 — Install dependencies without scripts
 
+**Who:** 🧪 you in the code-server terminal, or 💬 "install dependencies in acme" (Claude runs
+`bin/sandbox exec acme npm ci`). The `npm rebuild … --ignore-scripts=false` exception is a
+decision: 🧪 you run it, or 💬 Claude only after you say which package.
+
 In the code-server terminal:
 
 ```bash
@@ -475,6 +556,16 @@ scripts is only known by trying.
 
 ### Task 3 — Develop
 
+**Who:**
+
+- 🧪 you write code in code-server and run the app: `npm run dev -- --host 0.0.0.0`.
+- 🌐 you look at the app at `http://127.0.0.1:5173` (sandbox profile).
+- 💬 Claude helps when you ask, for example "run the tests in acme" (`bin/sandbox exec acme
+  npm test`), "show me src/App.tsx in acme" (`bin/sandbox scan acme cat src/App.tsx`), "fix the
+  failing test in acme" (writes a patch to its scratchpad, then `bin/sandbox apply acme
+  <patch-file>`; you see `git diff --stat`).
+- 💬 or 🖥 `sandbox stop acme` when you stop for the day.
+
 Open `http://127.0.0.1:8443` in the sandbox browser profile. Start the app with
 `npm run dev -- --host 0.0.0.0` (Vite) and open `http://127.0.0.1:5173`. Install
 editor extensions only from well-known publishers (code-server uses Open VSX, not the
@@ -488,9 +579,17 @@ Claude can help from the Mac without touching the code on disk: it reads with
 
 ### Task 1 — Commit inside the container
 
+**Who:** 🧪 you, in the code-server terminal (`git add -A && git commit -m "…"`), or the
+Source Control view in code-server. Claude can do it on request with
+`bin/sandbox exec acme git commit -am "…"`, but you decide when the solution is done.
+
 Commit your work in the code-server terminal.
 
 ### Task 2 — Export or push
+
+**Who:** export: 💬 "export acme" or 🖥 `sandbox export acme`. Sending the zip or pushing
+the bundle: 🖥 you only (it goes to the employer). Push from the container: 🧪 you only (you
+type the token).
 
 Export (recommended), to the Mac as text and archives:
 
@@ -520,6 +619,10 @@ repo, typed when git prompts and not stored (`git config --global credential.hel
 unset).
 
 ## Phase 6 — Cleanup
+
+**Who:** 🖥 you: `sandbox rm acme` (type `acme` to confirm), or 💬 "remove acme" (Claude runs
+`bin/sandbox rm acme --yes` and the hook asks you to confirm). Deleting `work/acme/` and
+revoking tokens: 🖥 you only.
 
 ```bash
 sandbox rm acme
@@ -551,6 +654,11 @@ created for this test.
 - **Scan misses.** See Phase 3 / Task 4; the container, not the scan, is the boundary.
 
 ## Phase 7 — Verification
+
+**Who:** 🖥 you (these call `docker` directly, which the guard does not let Claude do). A
+project `acme` must exist and be running for checks 3–5: 🖥 `sandbox new acme
+https://github.com/agenticDraft/job-test-sandbox.git`, write `Verdict: Green` into
+`work/acme/scan.md`, `sandbox up acme`, run the checks, then `sandbox rm acme`.
 
 Run once after Phase 1, and again whenever the image or scripts change. Every line must
 print the expected result. Then run the checks in Phase 6 of

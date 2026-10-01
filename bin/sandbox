@@ -311,7 +311,7 @@ if [ $# -gt 0 ]; then shift; fi
 case "$cmd" in
   new|scan|up|exec|apply|export)
     if [ -n "${CLAUDECODE:-}" ] && ! guard_on; then
-      die "the guard is off ($SETTINGS does not register .claude/hooks/guard.sh), so Claude may not run '$cmd'. Switch it on: mv .claude/settings.json.off .claude/settings.json"
+      die "the guard is off ($SETTINGS does not register .claude/hooks/guard.sh), so Claude may not run '$cmd'. Switch it on: guard-on (or: mv .claude/settings.json.off .claude/settings.json)"
     fi ;;
 esac
 case "$cmd" in
