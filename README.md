@@ -204,6 +204,28 @@ Download from orbstack.dev. The free tier is "personal, non-commercial use". Doi
 for your own job application reads as personal use, but their page does not define this
 precisely.
 
+1. Check the chip: `uname -m` prints `arm64` (Apple Silicon) or `x86_64` (Intel). The
+   Homebrew cask picks the right build; on the website, choose the matching download.
+2. Install, in a normal terminal (it may ask for your Mac password):
+
+   ```bash
+   brew install --cask orbstack
+   ```
+
+   It may first print "Auto-updating Homebrew..." and pause; that is normal. It ends with
+   `orbstack was successfully installed!`.
+3. Start it once: Cmd+Space, type "OrbStack", Enter (or `open -a OrbStack`). Finish the
+   first-run setup. While its menu bar icon is there, Docker is running; there is no
+   separate Docker app to start.
+4. Check, in a new terminal:
+
+   ```bash
+   command -v docker      # prints a path
+   docker info | head -5  # server details, not "Cannot connect to the Docker daemon"
+   ```
+
+Updates later: `brew upgrade --cask orbstack`.
+
 ### Task 2 — Lock down OrbStack settings
 
 - Docker settings → turn **off** "Expose ports to LAN" (`docker.expose_ports_to_lan`).
