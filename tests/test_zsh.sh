@@ -41,4 +41,17 @@ assert_contains "prompt marked inside the repo" "🛡 MAC · job-test-sandbox" "
 zr 'PROMPT="> "; cd "'"$ROOT"'"; _jts_prompt; _jts_prompt; cd /tmp; _jts_prompt; print -r -- "$PROMPT"'
 assert_eq "marker added once and removed outside" "> " "$OUT"
 
+zr 'docker exec jt-acme git log -p src/'
+assert_eq "exec into a sandbox container is untouched" 0 "$CODE"
+zr 'docker exec jt-acme cat /var/run/docker.sock'
+assert_eq "commands inside the container are not inspected" 0 "$CODE"
+zr 'docker run --rm job-sandbox:base ls -v /usr'
+assert_eq "args after the image are not inspected" 0 "$CODE"
+zr 'docker run -v/Users:/x job-sandbox:base true'
+assert_eq "attached -v/ refused" 1 "$CODE"
+zr 'docker run --volume=./a:/x job-sandbox:base true'
+assert_eq "--volume=./ refused" 1 "$CODE"
+zr 'docker run --publish=8443:8443 job-sandbox:base true'
+assert_eq "--publish= without 127.0.0.1 refused" 1 "$CODE"
+
 finish

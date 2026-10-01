@@ -14,20 +14,29 @@ docker() {
     command docker "$@"; return
   fi
   local a prev="" reason=""
-  for a in "$@"; do
-    case "$a" in
-      *docker.sock*) reason="mounting the Docker socket hands the container control of Docker" ;;
-      --privileged) reason="--privileged removes the container's isolation" ;;
-      *type=bind*) reason="bind mounts expose Mac files" ;;
-      --volume=/*|--volume=\~*) reason="bind mount of a Mac path ($a)" ;;
-      --publish=*) [[ "$a" == --publish=127.0.0.1:* ]] || reason="port ${a#--publish=} is not bound to 127.0.0.1" ;;
-    esac
-    case "$prev" in
-      -v|--volume) [[ "$a" == /* || "$a" == \~* || "$a" == .* ]] && reason="bind mount of a Mac path ($a)" ;;
-      -p|--publish) [[ "$a" == 127.0.0.1:* ]] || reason="port $a is not bound to 127.0.0.1" ;;
-    esac
-    prev="$a"
-  done
+  # Only container creation can mount or publish; stop at the image so the
+  # command that runs inside the container is never inspected.
+  if [[ "$1" == run || "$1" == create ]]; then
+    for a in "${@:2}"; do
+      # The image is the first job-sandbox* word that is not the value of an option.
+      case "$prev" in
+        --name|--env|-e|--label|-l|--network|--net|--user|-u|--workdir|-w|--hostname|-h|--entrypoint|--memory|-m|--cpus|--pids-limit|--cap-drop|--cap-add|--security-opt|--tmpfs|--mount) ;;
+        *) [[ "$a" == job-sandbox* ]] && break ;;
+      esac
+      case "$a" in
+        *docker.sock*) reason="mounting the Docker socket hands the container control of Docker" ;;
+        --privileged) reason="--privileged removes the container's isolation" ;;
+        *type=bind*) reason="bind mounts expose Mac files" ;;
+        -v/*|-v\~*|-v.*|--volume=/*|--volume=\~*|--volume=.*) reason="bind mount of a Mac path ($a)" ;;
+        --publish=*) [[ "$a" == --publish=127.0.0.1:* ]] || reason="port ${a#--publish=} is not bound to 127.0.0.1" ;;
+      esac
+      case "$prev" in
+        -v|--volume) [[ "$a" == /* || "$a" == \~* || "$a" == .* ]] && reason="bind mount of a Mac path ($a)" ;;
+        -p|--publish) [[ "$a" == 127.0.0.1:* ]] || reason="port $a is not bound to 127.0.0.1" ;;
+      esac
+      prev="$a"
+    done
+  fi
   if [[ -n "$reason" ]]; then
     print -u2 "🛡 blocked: $reason."
     print -u2 "   Use the sandbox command instead: $JTS_ROOT/bin/sandbox help"
