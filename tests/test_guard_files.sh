@@ -43,4 +43,21 @@ f Write file_path /fake/repo/work/acme/scan.md 0
 f Edit file_path README.md 0
 f Edit file_path /fake/repo/CLAUDE.md 0
 
+hook NotebookEdit '{"file_path":"","notebook_path":"/fake/repo/bin/sandbox"}'
+assert_eq "NotebookEdit checks notebook_path, not a decoy file_path" 2 "$CODE"
+hook NotebookEdit '{"file_path":"/fake/repo/docs/x.ipynb","notebook_path":"/fake/repo/.git/hooks/pre-commit"}'
+assert_eq "NotebookEdit ignores a harmless file_path" 2 "$CODE"
+hook Grep '{"file_path":"/fake/repo","path":"/Users/someone"}'
+assert_eq "Grep checks path, not file_path" 2 "$CODE"
+hook Glob '{"file_path":"","path":"/etc"}'
+assert_eq "Glob checks path" 2 "$CODE"
+hook Write '{"file_path":""}'
+assert_eq "Write without a path is denied" 2 "$CODE"
+f NotebookEdit notebook_path /fake/repo/docs/n.ipynb 0
+f Write file_path '~/.claude/settings.json' 2
+f Write file_path '~/.claude/projects/p/memory/x.md' 0
+f Write file_path ./bin/sandbox 2
+f Write file_path //fake/repo/bin/sandbox 2
+f Glob path /etc 2
+
 finish

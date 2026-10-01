@@ -109,9 +109,18 @@ check_bash() {
 
 check_file_tool() {
   local p mode=read
-  p="$(field '.tool_input.file_path // .tool_input.notebook_path // .tool_input.path')"
   case "$tool" in Edit|Write|NotebookEdit) mode=write ;; esac
-  [ -z "$p" ] && exit 0
+  local key
+  case "$tool" in
+    NotebookEdit) key=notebook_path ;;
+    Grep|Glob) key=path ;;
+    *) key=file_path ;;
+  esac
+  p="$(field ".tool_input.$key")"
+  if [ -z "$p" ]; then
+    case "$tool" in Grep|Glob) exit 0 ;; esac
+    deny "$tool needs a $key."
+  fi
   path_ok "$p" "$mode" ||
     deny "$tool outside this repo is not allowed ($p). Test code is read only through: bin/sandbox scan <firm> <read command>"
   if [ "$mode" = write ]; then
