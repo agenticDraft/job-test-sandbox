@@ -1527,23 +1527,28 @@ Zoran to approve that write.
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|Read|Edit|Write|NotebookEdit|Grep|Glob",
+        "matcher": "*",
         "hooks": [
-          { "type": "command", "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/guard.sh" }
+          { "type": "command", "command": "/bin/bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/guard.sh\"" }
         ]
       }
     ]
   },
   "permissions": {
-    "allow": ["Bash(bin/sandbox status)", "Bash(bin/sandbox status *)", "Bash(bin/sandbox scan *)", "Bash(tests/run.sh)"],
-    "deny": ["Bash(docker *)", "Bash(npm *)", "Bash(npx *)", "Bash(node *)", "Bash(curl *)", "Bash(wget *)", "Bash(git push)", "Bash(git push *)"]
+    "allow": ["Bash(bin/sandbox status)", "Bash(bin/sandbox status *)", "Bash(bin/sandbox scan *)", "Bash(tests/run.sh)", "Bash(tests/run.sh *)"],
+    "deny": ["Monitor", "Bash(docker *)", "Bash(npm *)", "Bash(npx *)", "Bash(node *)", "Bash(curl *)", "Bash(wget *)", "Bash(git push)", "Bash(git push *)"]
+  },
+  "sandbox": {
+    "excludedCommands": ["bin/sandbox *", "./bin/sandbox *"]
   },
   "statusLine": {
     "type": "command",
-    "command": "${CLAUDE_PROJECT_DIR:-.}/.claude/statusline.sh"
+    "command": "/bin/bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/statusline.sh\""
   }
 }
 ```
+
+Hook and statusline run via /bin/bash (no exec bit needed); bin/sandbox is excluded from the Bash sandbox because docker cannot run inside it (Claude Code docs: sandboxing, 'docker commands fail').
 
 - [ ] **Step 2: Commit**
 
@@ -1571,9 +1576,10 @@ git commit -m "Activate the sandbox guard hook and statusline"
 Every line must give the expected result.
 
 - [ ] **Step 1: Unit tests** — `tests/run.sh` → `ALL PASS`.
-- [ ] **Step 2: Claude hook** — from Claude in this repo: `docker run -v /Users:/x job-sandbox:base true`,
-  `npm i` and `git push` are refused with a reason; `bin/sandbox status` runs; the statusline
-  shows `🛡 sandbox: acme · Green · …`.
+- [ ] **Step 2: Claude hook** — from Claude in this repo, each of these must fail with
+  "Blocked by the job-test-sandbox guard": `cat /etc/hosts`; a Write to `bin/x`; a Monitor tool
+  call. Also: `bin/sandbox up acme --accept-question` asks for confirmation; `bin/sandbox status`
+  runs and reaches Docker; the statusline shows `🛡 sandbox: …`.
 - [ ] **Step 3: Gate** — with `Verdict: Red`, then `Verdict: Question`, then no `scan.md`:
   `sandbox up acme` refuses each time; with `Verdict: Green` it starts and prints the password.
 - [ ] **Step 4: Container** —
