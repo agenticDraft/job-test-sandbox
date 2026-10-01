@@ -178,6 +178,56 @@ cmd_status() {
   done
 }
 
+cmd_up() {
+  local firm="${1:-}" accept="${2:-}"
+  check_firm "$firm"
+  need_docker; need_image; need_volume "$firm"
+  case "$(scan_verdict "$firm")" in
+    Green) ;;
+    Question) [ "$accept" = --accept-question ] ||
+      die "scan verdict is Question; read work/$firm/scan.md, then: sandbox up $firm --accept-question" ;;
+    Red) die "scan verdict is Red; do not run it. Remove it: sandbox rm $firm" ;;
+    *) die "no 'Verdict:' line in work/$firm/scan.md; ask Claude \"scan $firm\" first" ;;
+  esac
+  local pwfile="$WORK/$firm/password"
+  case "$(container_state "$firm")" in
+    running) echo "jt-$firm is already running." ;;
+    stopped) docker start "jt-$firm" >/dev/null ;;
+    missing)
+      mkdir -p "$WORK/$firm"
+      ( umask 077; openssl rand -hex 12 > "$pwfile" )
+      docker run -d --name "jt-$firm" --hostname "jt-$firm" "${HARDEN[@]}" \
+        --pids-limit 1024 --memory 6g --cpus 4 \
+        -p 127.0.0.1:8443:8443 -p 127.0.0.1:5173:5173 \
+        -e PASSWORD="$(cat "$pwfile")" \
+        -v "jt-$firm:$PROJECT" "$IMAGE" \
+        code-server --bind-addr 0.0.0.0:8443 --disable-telemetry "$PROJECT" >/dev/null ;;
+  esac
+  local pw="(missing: work/$firm/password)"
+  if [ -f "$pwfile" ]; then pw="$(cat "$pwfile")"; fi
+  echo "Open http://127.0.0.1:8443 in the sandbox browser profile. Password: $pw"
+}
+
+cmd_exec() {
+  local firm="${1:-}"
+  check_firm "$firm"; shift
+  [ $# -gt 0 ] || die "usage: sandbox exec <firm> <command>"
+  need_docker; need_running "$firm"
+  local tty=""
+  if [ -t 0 ] && [ -t 1 ]; then tty="-it"; fi
+  docker exec $tty --user dev -w "$PROJECT" "jt-$firm" "$@"
+}
+
+# The patch is written by Claude or you on the Mac; the test code itself never leaves the volume.
+cmd_apply() {
+  local firm="${1:-}"
+  check_firm "$firm"
+  if [ -t 0 ]; then die "pipe a patch in: sandbox apply $firm < change.patch"; fi
+  need_docker; need_running "$firm"
+  docker exec -i --user dev -w "$PROJECT" "jt-$firm" git apply --whitespace=nowarn -
+  docker exec --user dev -w "$PROJECT" "jt-$firm" git diff --stat
+}
+
 cmd="${1:-}"
 if [ $# -gt 0 ]; then shift; fi
 case "$cmd" in
