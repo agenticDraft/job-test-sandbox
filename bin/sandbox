@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# sandbox: the single entry point for the job test sandbox (README.md; spec
+# docs/superpowers/specs/2026-10-01-sandbox-ux-design.md). Only this script talks to Docker.
+# Must run on macOS /bin/bash 3.2: no associative arrays, no mapfile, no ${x,,}.
+set -euo pipefail
+
+IMAGE="job-sandbox:base"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WORK="${SANDBOX_WORK_DIR:-$ROOT/work}"
+PROJECT=/home/dev/project
+HARDEN=(--user dev --cap-drop=ALL --security-opt no-new-privileges)
+
+die() { echo "sandbox: $*" >&2; exit 1; }
+
+usage() {
+  cat <<'EOF'
+Usage: sandbox <command> [args]
+
+  build                            build the base image job-sandbox:base
+  new <firm> <https-git-url|zip>   create volume jt-<firm> and fill it
+  scan <firm> <read command>       read the code: no network, read-only
+  up <firm> [--accept-question]    start code-server (needs a Green scan)
+  exec <firm> <command>            run a command in the running container
+  apply <firm> < change.patch      apply a patch inside the container
+  export <firm>                    write bundle + zip to work/<firm>/out/
+  rm <firm> [--yes]                delete the container and the volume
+  status [firm] [--short]          every project, its state and the next step
+EOF
+}
+
+need_docker() {
+  command -v docker >/dev/null 2>&1 || die "docker not found; install OrbStack (README Phase 1 / Task 1)"
+}
+need_image() {
+  docker image inspect "$IMAGE" >/dev/null 2>&1 || die "image $IMAGE is missing; run: sandbox build"
+}
+check_firm() {
+  [[ "${1:-}" =~ ^[a-z0-9][a-z0-9-]{0,30}$ ]] ||
+    die "firm must be lowercase letters, digits or dashes (got '${1:-}')"
+}
+volume_exists() { docker volume inspect "jt-$1" >/dev/null 2>&1; }
+need_volume() { volume_exists "$1" || die "no project jt-$1; create it: sandbox new $1 <url|zip>"; }
+
+# Prints running | stopped | missing.
+container_state() {
+  local r
+  r="$(docker container inspect --format '{{.State.Running}}' "jt-$1" 2>/dev/null)" || { echo missing; return 0; }
+  if [ "$r" = true ]; then echo running; else echo stopped; fi
+}
+need_running() { [ "$(container_state "$1")" = running ] || die "jt-$1 is not running; run: sandbox up $1"; }
+
+# Prints Green | Question | Red | none, from the 'Verdict: X' line in work/<firm>/scan.md.
+scan_verdict() {
+  local f="$WORK/$1/scan.md" v=""
+  if [ -f "$f" ]; then
+    v="$(sed -n -E 's/^Verdict: (Green|Question|Red)[[:space:]]*$/\1/p' "$f" | head -n 1)"
+  fi
+  echo "${v:-none}"
+}
+
+next_step() {  # firm verdict state
+  case "$2/$3" in
+    */running) echo "work at http://127.0.0.1:8443; when done: sandbox export $1" ;;
+    none/*) echo "ask Claude \"scan $1\"" ;;
+    Red/*) echo "do not run it: sandbox rm $1" ;;
+    Question/*) echo "read work/$1/scan.md, then: sandbox up $1 --accept-question" ;;
+    Green/*) echo "sandbox up $1" ;;
+  esac
+}
+
+list_firms() { docker volume ls --format '{{.Name}}' | sed -n 's/^jt-//p'; }
+
+# One line for the Claude statusline: the running project if any, else the first one.
+short_status() {
+  local f pick="" n=0
+  for f in $1; do
+    n=$((n + 1))
+    if [ -z "$pick" ] || [ "$(container_state "$f")" = running ]; then pick="$f"; fi
+  done
+  local more=""
+  [ "$n" -gt 1 ] && more=" (+$((n - 1)))"
+  echo "🛡 sandbox: $pick · $(scan_verdict "$pick") · $(container_state "$pick")$more"
+}
+
+cmd_status() {
+  local a only="" short=""
+  for a in "$@"; do case "$a" in --short) short=1 ;; *) only="$a" ;; esac; done
+  if [ -n "$only" ]; then check_firm "$only"; fi
+  if ! command -v docker >/dev/null 2>&1; then
+    if [ -n "$short" ]; then echo "🛡 sandbox: docker not installed"; return 0; fi
+    need_docker
+  fi
+  local firms
+  if [ -n "$only" ]; then need_volume "$only"; firms="$only"; else firms="$(list_firms)"; fi
+  if [ -z "$firms" ]; then
+    if [ -n "$short" ]; then echo "🛡 sandbox: none"; else echo "No projects. Start one: sandbox new <firm> <url|zip>"; fi
+    return 0
+  fi
+  if [ -n "$short" ]; then short_status "$firms"; return 0; fi
+  local f v s
+  for f in $firms; do
+    v="$(scan_verdict "$f")"; s="$(container_state "$f")"
+    printf '%s  scan=%s  container=%s  next: %s\n' "$f" "$v" "$s" "$(next_step "$f" "$v" "$s")"
+  done
+}
+
+cmd="${1:-}"
+if [ $# -gt 0 ]; then shift; fi
+case "$cmd" in
+  build|new|scan|up|exec|apply|export|rm|status) "cmd_$cmd" "$@" ;;
+  ""|-h|--help|help) usage ;;
+  *) usage >&2; exit 2 ;;
+esac
