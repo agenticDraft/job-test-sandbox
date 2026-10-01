@@ -36,6 +36,14 @@ allows 'ls work'
 allows 'grep -rn tarball README.md'
 denies 'bin/sandbox status ; unzip acme.zip'
 
+# A commit message that only mentions the words is not intake.
+allows 'git commit -m "Mac intake blocks: clone and unzip" -m "tar and open too"'
+denies 'git commit -m x ; unzip acme.zip'
+denies 'git commit -m x && git clone https://github.com/acme/test.git'
+denies 'git commit -m "$(unzip acme.zip)"'
+denies 'git commit -m "`unzip acme.zip`"'
+denies 'git commit -F <(unzip -p acme.zip)'
+
 hook Read '{"file_path":"/fake/repo/README.md"}'
 assert_eq "other tools pass through" 0 "$CODE"
 
