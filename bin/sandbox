@@ -82,6 +82,72 @@ short_status() {
   echo "🛡 sandbox: $pick · $(scan_verdict "$pick") · $(container_state "$pick")$more"
 }
 
+cmd_build() { need_docker; docker build -t "$IMAGE" "$ROOT/boilerplate"; }
+
+cmd_new() {
+  local firm="${1:-}" src="${2:-}"
+  check_firm "$firm"
+  [ -n "$src" ] || die "usage: sandbox new <firm> <https-git-url|zip>"
+  case "$src" in
+    https://*) ;;
+    *.zip) [ -f "$src" ] || die "zip not found: $src" ;;
+    *) die "source must be an https:// git URL or a .zip file (ssh URLs need keys the container must not have)" ;;
+  esac
+  need_docker; need_image
+  if volume_exists "$firm"; then die "jt-$firm already exists; remove it first: sandbox rm $firm"; fi
+  docker volume create "jt-$firm" >/dev/null
+  local failed=0
+  if [[ "$src" == https://* ]]; then
+    # A private repo asks for a read-only token here; only a terminal can answer that.
+    local tty=""
+    if [ -t 0 ]; then tty="-it"; fi
+    docker run --rm $tty "${HARDEN[@]}" -v "jt-$firm:$PROJECT" "$IMAGE" \
+      git clone --no-recurse-submodules "$src" "$PROJECT" || failed=1
+  else
+    # Streamed through stdin so the Mac never unpacks it.
+    docker run --rm -i "${HARDEN[@]}" -v "jt-$firm:$PROJECT" "$IMAGE" \
+      sh -c "cat > /tmp/t.zip && unzip -q /tmp/t.zip -d $PROJECT" < "$src" || failed=1
+  fi
+  if [ "$failed" -ne 0 ]; then
+    docker volume rm "jt-$firm" >/dev/null
+    die "could not fill jt-$firm; the volume was removed"
+  fi
+  mkdir -p "$WORK/$firm"
+  echo "Created jt-$firm. Next: ask Claude \"scan $firm\" (writes work/$firm/scan.md)."
+}
+
+# README Phase 3 / Task 2: read commands only, and no way to start a program from the repo.
+check_scan_command() {
+  case "$1" in
+    ls|find|cat|head|tail|grep|awk|wc|file) ;;
+    git) case "${2:-}" in log|show) ;; *) die "scan allows only 'git log' and 'git show'" ;; esac ;;
+    *) die "scan allows only: ls find cat head tail grep awk wc file, git log, git show (got '$1')" ;;
+  esac
+  local a
+  for a in "$@"; do
+    case "$a" in
+      -exec|-execdir|-ok|-okdir|-delete) die "scan: find $a is not allowed" ;;
+      *system*|*getline*|*'|'*) if [ "$1" = awk ]; then die "scan: awk may not run commands"; fi ;;
+    esac
+  done
+}
+
+cmd_scan() {
+  local firm="${1:-}"
+  check_firm "$firm"; shift
+  [ $# -gt 0 ] || die "usage: sandbox scan <firm> <read command>"
+  check_scan_command "$@"
+  need_docker; need_image; need_volume "$firm"
+  if [ "$1" = git ]; then
+    # The repo's own git config could name programs (diff.external, textconv, fsmonitor, hooks).
+    local sub="$2"; shift 2
+    set -- git -c core.fsmonitor=false -c core.hooksPath=/dev/null -c diff.external= -c core.pager=cat \
+      "$sub" --no-ext-diff --no-textconv "$@"
+  fi
+  docker run --rm --network none --read-only "${HARDEN[@]}" \
+    -v "jt-$firm:/src:ro" -w /src "$IMAGE" "$@"
+}
+
 cmd_status() {
   local a only="" short=""
   for a in "$@"; do case "$a" in --short) short=1 ;; *) only="$a" ;; esac; done
