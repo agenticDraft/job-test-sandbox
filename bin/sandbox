@@ -300,8 +300,20 @@ cmd_rm() {
   echo "Removed jt-$firm. work/$firm/ is kept; delete it yourself when you no longer need it."
 }
 
+# Claude may touch test code only while the guard hook is registered in this repo's settings
+# (README: Guardrails). Claude Code sets CLAUDECODE=1 for the commands it runs; your own
+# terminal does not, so this never blocks you.
+SETTINGS="${SANDBOX_SETTINGS:-$ROOT/.claude/settings.json}"
+guard_on() { [ -f "$SETTINGS" ] && grep -q '\.claude/hooks/guard\.sh' "$SETTINGS"; }
+
 cmd="${1:-}"
 if [ $# -gt 0 ]; then shift; fi
+case "$cmd" in
+  new|scan|up|exec|apply|export)
+    if [ -n "${CLAUDECODE:-}" ] && ! guard_on; then
+      die "the guard is off ($SETTINGS does not register .claude/hooks/guard.sh), so Claude may not run '$cmd'. Switch it on: guard-on (or: mv .claude/settings.json.off .claude/settings.json)"
+    fi ;;
+esac
 case "$cmd" in
   build|new|scan|up|stop|exec|apply|export|rm|status) "cmd_$cmd" "$@" ;;
   ""|-h|--help|help) usage ;;

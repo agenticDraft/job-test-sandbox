@@ -27,11 +27,34 @@ zr 'command docker run --privileged jt-x'
 assert_eq "command docker bypasses on purpose" 0 "$CODE"
 
 zr 'git clone --bogus-flag' "$ROOT"
-assert_contains "git clone in the repo warns" "never get cloned on the Mac" "$OUT"
+assert_eq "git clone in the repo is blocked" 1 "$CODE"
+assert_contains "git clone block explained" "never get cloned on the Mac" "$OUT"
+assert_not_contains "blocked clone never ran git" "unknown option" "$OUT"
 zr 'git clone --bogus-flag' /tmp
-assert_not_contains "git clone elsewhere is quiet" "never get cloned" "$OUT"
+assert_not_contains "git clone elsewhere is untouched" "never get cloned" "$OUT"
+zr 'command git clone --bogus-flag' "$ROOT"
+assert_contains "command git clone bypasses on purpose" "unknown option" "$OUT"
 zr 'unzip /nonexistent.zip' "$ROOT"
-assert_contains "unzip in the repo warns" "sandbox new" "$OUT"
+assert_eq "unzip in the repo is blocked" 1 "$CODE"
+assert_contains "unzip block names sandbox new" "sandbox new" "$OUT"
+zr 'open /nonexistent/acme.zip' "$ROOT"
+assert_eq "open of a zip in the repo is blocked" 1 "$CODE"
+assert_contains "open block explained" "archives are never opened" "$OUT"
+zr 'git status --short >/dev/null' "$ROOT"
+assert_eq "other git commands in the repo work" 0 "$CODE"
+
+# guard-on / guard-off rename the settings file (a temp copy here, never the real one).
+C="$T/claude"; mkdir -p "$C"; echo '{}' > "$C/settings.json"
+zr "JTS_CLAUDE_DIR='$C'; guard-off; guard-status"
+assert_contains "guard-off switches off" "guard is off" "$OUT"
+assert_eq "guard-off renamed the file" "settings.json.off" "$(ls "$C")"
+zr "JTS_CLAUDE_DIR='$C'; guard-off"
+assert_contains "guard-off twice is harmless" "already off" "$OUT"
+zr "JTS_CLAUDE_DIR='$C'; guard-on; guard-status"
+assert_contains "guard-on switches on" "guard is on" "$OUT"
+assert_eq "guard-on renamed it back" "settings.json" "$(ls "$C")"
+zr "JTS_CLAUDE_DIR='$T/nothing'; guard-on"
+assert_eq "guard-on without any settings file fails" 1 "$CODE"
 
 zr 'sandbox status --short'
 assert_eq "sandbox function runs bin/sandbox" "🛡 sandbox: none" "$OUT"

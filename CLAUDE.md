@@ -32,6 +32,14 @@ runbook; read it before changing anything.
 - Scan results go to `work/<firm>/scan.md` and must contain a line `Verdict: Green`,
   `Verdict: Question` or `Verdict: Red` (README Phase 3 / Task 4); `sandbox up` reads it.
 - `.claude/hooks/guard.sh` is edited by Zoran only.
+- The guard is on when `.claude/settings.json` exists, off when it is renamed to
+  `.claude/settings.json.off` (README: Guardrails, "Scope, on and off"). While it is off,
+  `bin/sandbox` refuses new/scan/up/exec/apply/export from Claude. Never work on a test
+  project with the guard off; remind Zoran to switch it back on after maintenance with
+  `guard-on` (zsh function; `! guard-on` from Claude Code).
+- Never `git clone`, unzip, untar or `open` an archive on the Mac, guard on or off. The
+  always-on intake hook (`.claude/hooks/no-intake.sh`, via `.claude/settings.local.json`)
+  refuses it; intake is only `bin/sandbox new <firm> <https-url|zip>`.
 - Commit with plain `-m` messages, for example
   `git commit -m "Add scan for acme" -m "Claude-Session: https://claude.ai/code/session_ID"`
   (ID is the real session id); no `$(...)` or heredocs, the guard denies them.

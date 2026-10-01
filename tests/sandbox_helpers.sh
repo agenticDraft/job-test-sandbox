@@ -9,6 +9,9 @@ setup() {
   export FAKE_DOCKER_VOLUMES="" FAKE_DOCKER_RUNNING="" FAKE_DOCKER_STOPPED="" FAKE_DOCKER_EXIT=0
   export FAKE_DOCKER_IMAGES="job-sandbox:base"
   export PATH="$ROOT/tests/fakebin:/usr/bin:/bin"
+  # Tests run as if from your own terminal; test_sandbox_guard_required.sh sets CLAUDECODE itself.
+  unset CLAUDECODE
+  export SANDBOX_SETTINGS="$T/settings.json"
 }
 # run <args...>: bin/sandbox with stdin from /dev/null; sets OUT (stdout+stderr) and CODE.
 run() { OUT="$("$ROOT/bin/sandbox" "$@" </dev/null 2>&1)"; CODE=$?; }
