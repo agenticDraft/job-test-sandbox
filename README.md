@@ -216,7 +216,12 @@ on the allowlist is refused with a message.
   name. It refuses bind mounts (`-v /…`, `-v/…`, `--volume=…`, `--mount type=bind`),
   `docker.sock`, `--privileged` and ports not bound to `127.0.0.1`. The message points to
   `bin/sandbox help` and mentions the `command docker` override.
-- Inside this repo it warns (does not block) on `git clone` and `unzip`.
+- Inside this repo it blocks `git clone`, `unzip` and `open` of an archive
+  (`.zip .tar .tgz .gz .7z .rar`); override with `command git clone …` and the like.
+
+**Intake hook for Claude** (`.claude/hooks/no-intake.sh`, registered in
+`.claude/settings.local.json`; Phase 1 / Task 6) — always on, also while the main guard is
+off: no clone, no unpacking, no opening archives.
 - **Escape hatch:** `command docker …` bypasses the guard on purpose.
 
 **Statusline** — Claude's status line shows `🛡 sandbox: <firm> · <verdict> · <running|stopped>`,
@@ -284,9 +289,38 @@ source ~/github/agenticDraft/job-test-sandbox/shell/sandbox.zsh
 
 It defines a `sandbox` function (so the command works from any directory) and a `docker`
 wrapper that only looks at `docker run|create` calls naming `jt-` or `job-sandbox`; every
-other `docker` call passes through unchanged. It also warns (does not block) on `git clone`
-and `unzip` inside this repo, and puts the prompt marker `🛡 MAC · job-test-sandbox` on the
-prompt while you are in this repo. See Guardrails / Layer 3.
+other `docker` call passes through unchanged. Inside this repo it blocks `git clone`, `unzip`
+and `open` of an archive (override: `command git clone …`), and puts the prompt marker
+`🛡 MAC · job-test-sandbox` on the prompt while you are in this repo. See Guardrails / Layer 3.
+
+### Task 6 — Keep Claude from cloning or unpacking, always
+
+The main guard (`.claude/settings.json`) can be switched off for maintenance. A second,
+always-on hook covers intake: Claude may never run `git clone`, `gh repo clone`, `unzip`,
+`ditto`, `tar`, `7z` and similar, or `open` an archive in this repo, guard on or off. It lives
+in `.claude/hooks/no-intake.sh` (in git) and is registered in `.claude/settings.local.json`,
+which is local-only (your global git ignore excludes it), so create it once per clone:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "/bin/bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/no-intake.sh\"" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Claude Code may ask you to review a new or changed hook (`/hooks`) or need a restart before
+it takes effect. Check: ask Claude to run `unzip -l x.zip`; it must be refused with
+"Blocked by the job-test-sandbox intake rule". A single `bin/sandbox new <firm> <zip>` call
+is allowed: it streams the zip into the volume without unpacking it on the Mac. Finder
+(double-clicking a zip) cannot be blocked by any script; Rule 1 covers it.
 
 ## Phase 2 — New project intake
 

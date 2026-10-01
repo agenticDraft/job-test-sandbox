@@ -48,18 +48,38 @@ docker() {
 
 _jts_in_repo() { [[ "$PWD" == "$JTS_ROOT" || "$PWD" == "$JTS_ROOT"/* ]]; }
 
+# Inside this repo, test code never lands on the Mac: clone, unzip and opening an archive are
+# blocked here. Deliberate override: `command git clone …`, `command unzip …`, `command open …`.
+_jts_block() {
+  print -u2 "🛡 blocked: $1 Use: sandbox new <firm> <https-url|zip>"
+  print -u2 "   (Deliberate override: command $2 ...)"
+  return 1
+}
+
 git() {
   if [[ "$1" == clone ]] && _jts_in_repo; then
-    print -u2 "🛡 warning: test repos never get cloned on the Mac. Use: sandbox new <firm> <url>"
+    _jts_block "test repos never get cloned on the Mac." git; return
   fi
   command git "$@"
 }
 
 unzip() {
   if _jts_in_repo; then
-    print -u2 "🛡 warning: test zips are never unpacked on the Mac. Use: sandbox new <firm> <file.zip>"
+    _jts_block "test zips are never unpacked on the Mac." unzip; return
   fi
   command unzip "$@"
+}
+
+open() {
+  local a
+  if _jts_in_repo; then
+    for a in "$@"; do
+      case "$a" in
+        *.zip|*.tar|*.tgz|*.gz|*.7z|*.rar) _jts_block "archives are never opened on the Mac ($a)." open; return ;;
+      esac
+    done
+  fi
+  command open "$@"
 }
 
 _jts_prompt() {
