@@ -64,6 +64,21 @@ assert_contains "prompt marked inside the repo" "🛡 MAC · job-test-sandbox" "
 zr 'PROMPT="> "; cd "'"$ROOT"'"; _jts_prompt; _jts_prompt; cd /tmp; _jts_prompt; print -r -- "$PROMPT"'
 assert_eq "marker added once and removed outside" "> " "$OUT"
 
+# Claude Code's `!` and Bash shells replay a snapshot: functions whose names do not start
+# with a single `_`, and no shell variables. The guards must still work there.
+S="$T/snapshot.zsh"
+zsh -f -c "source '$Z'; for f in \${(k)functions}; do [[ \$f == _[^_]* ]] || functions \$f; done" > "$S"
+zs() { OUT="$(cd "${2:-/tmp}" && zsh -f -c "source '$S'; $1" 2>&1)"; CODE=$?; }
+zs 'guard-status'
+assert_not_contains "snapshot: guard-status finds this repo" "no /settings.json" "$OUT"
+assert_not_contains "snapshot: no missing helper" "command not found" "$OUT"
+zs 'git clone --bogus-flag' "$ROOT"
+assert_contains "snapshot: git clone in the repo is blocked" "never get cloned on the Mac" "$OUT"
+zs 'unzip /nonexistent.zip' "$ROOT"
+assert_contains "snapshot: unzip in the repo is blocked" "sandbox new" "$OUT"
+zs 'sandbox status --short'
+assert_eq "snapshot: sandbox function runs bin/sandbox" "🛡 sandbox: none" "$OUT"
+
 zr 'docker exec jt-acme git log -p src/'
 assert_eq "exec into a sandbox container is untouched" 0 "$CODE"
 zr 'docker exec jt-acme cat /var/run/docker.sock'

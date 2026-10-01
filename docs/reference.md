@@ -255,7 +255,8 @@ finding, never followed.
    `~/.ssh`, `Library/Application Support`, browser `Login Data`, wallet paths.
 5. **Odd files** — binaries, `.node` addons, minified JS inside `src/`, hidden files,
    very large single-line files.
-6. **Prompt injection** — text aimed at AI agents anywhere in the repo.
+6. **Prompt injection** — text aimed at AI agents anywhere in the repo, including invisible
+   Unicode (zero-width, bidi controls, tag characters) in agent-instruction files.
 
 ### Task 4 — Verdict
 
