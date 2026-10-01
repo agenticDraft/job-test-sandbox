@@ -3,7 +3,7 @@
 Sandbox for running untrusted take-home job tests on macOS. `README.md` is the overview; FIRST-INSTALLATION.md and USER-GUIDE.md hold
 the steps; read them before changing anything.
 
-## Status (2026-10-01)
+## Status (2026-10-02)
 
 - Built and checked on real Docker (OrbStack): `bin/sandbox`, the guard hook
   (`.claude/hooks/guard.sh`), statusline, `shell/sandbox.zsh`, `boilerplate/Dockerfile`.
@@ -36,13 +36,21 @@ the steps; read them before changing anything.
   `.claude/settings.json.off` (docs/reference.md: Guardrails, "Scope, on and off"). While it is off,
   `bin/sandbox` refuses new/scan/up/exec/apply/export from Claude. Never work on a test
   project with the guard off; remind Zoran to switch it back on after maintenance with
-  `guard-on` (zsh function; `! guard-on` from Claude Code).
+  `guard-on` (zsh function; `! guard-on` from Claude Code). That works only in a session
+  started after `shell/sandbox.zsh` was loaded; in an older session use
+  `! mv .claude/settings.json.off .claude/settings.json`.
+- While the guard is off, Claude's Bash sandbox still cannot write `.claude/hooks/` or
+  `.claude/skills/`, so `git checkout` or `pull` that touch them stop halfway. Leave branch
+  switches and pulls to Zoran.
 - Never `git clone`, unzip, untar or `open` an archive on the Mac, guard on or off. The
   always-on intake hook (`.claude/hooks/no-intake.sh`, via `.claude/settings.local.json`)
   refuses it; intake is only `bin/sandbox new <firm> <https-url|zip>`.
 - Commit with plain `-m` messages, for example
   `git commit -m "Add scan for acme" -m "Claude-Session: https://claude.ai/code/session_ID"`
   (ID is the real session id); no `$(...)` or heredocs, the guard denies them.
+- Run `git commit` as its own Bash call (not after `git add &&`) and keep `;`, `&`, `|`
+  and backticks out of the message: only a lone commit may mention clone, unzip or tar
+  without the intake hook refusing it.
 - Commit messages must be plain ASCII words (no `..`, no word in the message starting with
   `-`, no absolute paths, no non-ASCII), because the guard checks every word of the command.
 - `work/` is private (it reveals where Zoran applied) and must stay gitignored.
