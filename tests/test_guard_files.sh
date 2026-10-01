@@ -59,5 +59,9 @@ f Write file_path '~/.claude/projects/p/memory/x.md' 0
 f Write file_path ./bin/sandbox 2
 f Write file_path //fake/repo/bin/sandbox 2
 f Glob path /etc 2
+# The runbook artifact source is HTML that nothing executes.
+f Write file_path /fake/repo/.claude/artifacts/job-test-sandbox.html 0
+f Edit file_path .claude/artifacts/job-test-sandbox.html 0
+f Write file_path /fake/repo/.claude/artifactsx/y 2
 
 finish

@@ -94,4 +94,26 @@ assert_contains "apply runs git apply on stdin" "exec -i --user dev -w /home/dev
 assert_contains "apply shows the result" "git diff --stat" "$(log)"
 assert_eq "patch reached the container" "diff --git a/x b/x" "$(cat "$FAKE_DOCKER_STDIN")"
 
+# A patch file as argument: Claude's Bash sandbox catches `< file`, so this is Claude's form.
+printf 'diff --git a/y b/y\n' > "$T/change.patch"
+: > "$FAKE_DOCKER_STDIN"
+clear_log
+run apply acme "$T/change.patch"
+assert_eq "apply with a file: exit 0" 0 "$CODE"
+assert_contains "apply with a file runs git apply" "exec -i --user dev -w /home/dev/project jt-acme git apply --whitespace=nowarn -" "$(log)"
+assert_eq "patch file reached the container" "diff --git a/y b/y" "$(cat "$FAKE_DOCKER_STDIN")"
+run apply acme "$T/missing.patch"
+assert_eq "apply with a missing file fails" 1 "$CODE"
+assert_contains "missing patch file named" "missing.patch" "$OUT"
+
+# Docker installed but not reachable (OrbStack stopped, or run inside Claude's Bash sandbox).
+export FAKE_DOCKER_DOWN=1
+run exec acme npm ci
+assert_eq "unreachable docker: exec fails" 1 "$CODE"
+assert_contains "unreachable docker named, not 'not running'" "cannot reach the Docker server" "$OUT"
+assert_not_contains "no false 'not running'" "is not running" "$OUT"
+run up acme
+assert_contains "up names unreachable docker" "cannot reach the Docker server" "$OUT"
+unset FAKE_DOCKER_DOWN
+
 finish

@@ -123,8 +123,12 @@ Every step below is marked with where it happens:
 - `sandbox stop <firm>` — stop the container; the volume and your work stay. `sandbox up`
   starts it again.
 - `sandbox exec <firm> <command>` — `docker exec` into the running container as `dev`.
-- `sandbox apply <firm> < change.patch` — `git apply` the patch inside the container and
-  print `git diff --stat`.
+- `sandbox apply <firm> <patch-file>` — `git apply` the patch inside the container and
+  print `git diff --stat`. Piping it in (`< change.patch`) also works from your terminal.
+- If Docker is installed but not reachable, every command says "cannot reach the Docker
+  server" (OrbStack not running). From Claude this also happens when a `bin/sandbox` call is
+  joined with `;`, `&&` or `< file`: that line runs inside Claude's Bash sandbox, which cannot
+  reach Docker. Claude runs one `bin/sandbox` command per call.
 - `sandbox export <firm>` — bundle and zip into `work/<firm>/out/`. On failure no partial
   file is left behind.
 - `sandbox rm <firm> [--yes]` — delete container and volume; asks you to type the firm name,
@@ -141,8 +145,9 @@ Accepted limits:
 - No live IDE diagnostics. Claude sees type and lint errors only by running them with
   `sandbox exec`.
 - Claude cannot see the running app; share a screenshot when needed.
-- Claude's own file tools write only to `work/`, `docs/`, `README.md` and `CLAUDE.md` in this
-  repo. `bin/`, `tests/`, `shell/`, `boilerplate/`, `.claude/` and `.git/` are edited by you;
+- Claude's own file tools write only to `work/`, `docs/`, `README.md`, `CLAUDE.md` and
+  `.claude/artifacts/` (the runbook page source, which nothing executes) in this
+  repo. `bin/`, `tests/`, `shell/`, `boilerplate/`, the rest of `.claude/` and `.git/` are edited by you;
   to let Claude maintain them, turn the hook off first (edit `.claude/settings.json`).
 - The hook allowlist is strict, so new kinds of commands cause refusals or prompts until the
   allowlist is extended. Scan commands must be plain words too, for example
@@ -422,7 +427,7 @@ Microsoft marketplace). Stop the container (`sandbox stop acme`) when not workin
 
 Claude can help from the Mac without touching the code on disk: it reads with
 `sandbox scan`, runs commands with `sandbox exec acme <command>`, and changes files with
-`sandbox apply acme < change.patch` (see Working with Claude).
+`sandbox apply acme change.patch` (see Working with Claude).
 
 ## Phase 5 — Deliver the solution
 

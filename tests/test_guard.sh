@@ -135,4 +135,15 @@ denies 'echo x > /dev/nullx'
 allows 'bin/sandbox status 2>&1'
 allows 'git status 2>/dev/null | head -3'
 
+# Paths after `exec|scan <firm>` belong to the container, not the Mac.
+allows 'bin/sandbox exec acme ls /Users /mnt/mac'
+allows 'bin/sandbox exec acme grep CapEff /proc/self/status'
+allows 'bin/sandbox scan acme grep -f/src/patterns .'
+denies 'bin/sandbox exec /etc ls'
+denies 'bin/sandbox exec acme ls ; cat /etc/hosts'
+denies 'bin/sandbox status /etc/hosts'
+# apply reads the patch file on the Mac, so its path is still checked.
+allows 'bin/sandbox apply acme /fake/scratch/change.patch'
+denies 'bin/sandbox apply acme /etc/passwd'
+
 finish

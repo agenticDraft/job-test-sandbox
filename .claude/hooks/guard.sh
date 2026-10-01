@@ -46,14 +46,23 @@ check_segment() {
   seg="${1//\"/}"; seg="${seg//\'/}"
   set -f; set -- $seg; set +f
   [ $# -eq 0 ] && return 0
+  w1="$1"; w2="${2:-}"
+  # After `bin/sandbox exec|scan <firm>` the words run inside the container, so their paths are
+  # container paths and are not checked against the Mac. The character check still applies.
+  local checked=$# i=0
+  case "$w1" in
+    bin/sandbox|./bin/sandbox|"$root/bin/sandbox")
+      case "$w2" in exec|scan) checked=3 ;; esac ;;
+  esac
   for word in "$@"; do
+    i=$((i + 1))
+    [ "$i" -gt "$checked" ] && break
     t="${word#[0-9]}"; t="${t#>}"; t="${t#<}"
     case "$t" in
       -*/*) deny "options with a path attached are not allowed: $t" ;;
       /*|*..*) path_ok "$t" write || deny "path outside this repo: $t" ;;
     esac
   done
-  w1="$1"; w2="${2:-}"
   case "$w1" in
     bin/sandbox|./bin/sandbox|"$root/bin/sandbox")
       [ "$w2" = rm ] && WANTS_ASK="sandbox rm deletes the project volume and any work not exported. Confirm?"
@@ -133,8 +142,8 @@ check_file_tool() {
     case "$p" in /*) ;; "~"*) p="$HOME${p#\~}" ;; *) p="$root/$p" ;; esac
     if inside "$p" "$root"; then
       case "$p" in
-        "$root"/work/*|"$root"/docs/*|"$root"/README.md|"$root"/CLAUDE.md) ;;
-        *) deny "while the guard is active Claude writes only work/, docs/, README.md and CLAUDE.md in this repo; scripts, tests, .claude/ and .git/ are edited by you ($p)." ;;
+        "$root"/work/*|"$root"/docs/*|"$root"/README.md|"$root"/CLAUDE.md|"$root"/.claude/artifacts/*) ;;
+        *) deny "while the guard is active Claude writes only work/, docs/, README.md, CLAUDE.md and .claude/artifacts/ in this repo; scripts, tests, the rest of .claude/ and .git/ are edited by you ($p)." ;;
       esac
     fi
   fi

@@ -22,15 +22,18 @@ Usage: sandbox <command> [args]
   up <firm> [--accept-question]    start code-server (needs a Green scan)
   stop <firm>                      stop the container; the volume stays
   exec <firm> <command>            run a command in the running container
-  apply <firm> < change.patch      apply a patch inside the container
+  apply <firm> <patch-file>        apply a patch inside the container (or: < patch)
   export <firm>                    write bundle + zip to work/<firm>/out/
   rm <firm> [--yes]                delete the container and the volume
   status [firm] [--short]          every project, its state and the next step
 EOF
 }
 
+docker_up() { docker version --format '{{.Server.Version}}' >/dev/null 2>&1; }
+DOCKER_DOWN="cannot reach the Docker server: start OrbStack. From Claude, run one bin/sandbox command per Bash call, with no ; && or < redirect (otherwise it runs in Claude's Bash sandbox, which cannot reach Docker)."
 need_docker() {
   command -v docker >/dev/null 2>&1 || die "docker not found; install OrbStack (README Phase 1 / Task 1)"
+  docker_up || die "$DOCKER_DOWN"
 }
 need_image() {
   docker image inspect "$IMAGE" >/dev/null 2>&1 || die "image $IMAGE is missing; run: sandbox build"
@@ -167,6 +170,10 @@ cmd_status() {
     if [ -n "$short" ]; then echo "🛡 sandbox: docker not installed"; return 0; fi
     need_docker
   fi
+  if ! docker_up; then
+    if [ -n "$short" ]; then echo "🛡 sandbox: docker not reachable"; return 0; fi
+    die "$DOCKER_DOWN"
+  fi
   local firms
   if [ -n "$only" ]; then need_volume "$only"; firms="$only"; else firms="$(list_firms)"; fi
   if [ -z "$firms" ]; then
@@ -237,12 +244,21 @@ cmd_exec() {
 }
 
 # The patch is written by Claude or you on the Mac; the test code itself never leaves the volume.
+# Claude passes it as a file argument: `< file` would put the call inside Claude's Bash sandbox.
 cmd_apply() {
-  local firm="${1:-}"
+  local firm="${1:-}" patch="${2:-}"
   check_firm "$firm"
-  if [ -t 0 ]; then die "pipe a patch in: sandbox apply $firm < change.patch"; fi
+  if [ -n "$patch" ]; then
+    [ -f "$patch" ] || die "patch file not found: $patch"
+  elif [ -t 0 ]; then
+    die "give a patch: sandbox apply $firm change.patch (or pipe it in: < change.patch)"
+  fi
   need_docker; need_running "$firm"
-  docker exec -i --user dev -w "$PROJECT" "jt-$firm" git apply --whitespace=nowarn -
+  if [ -n "$patch" ]; then
+    docker exec -i --user dev -w "$PROJECT" "jt-$firm" git apply --whitespace=nowarn - < "$patch"
+  else
+    docker exec -i --user dev -w "$PROJECT" "jt-$firm" git apply --whitespace=nowarn -
+  fi
   docker exec --user dev -w "$PROJECT" "jt-$firm" git diff --stat
 }
 

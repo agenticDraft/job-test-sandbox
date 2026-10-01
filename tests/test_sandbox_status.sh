@@ -50,4 +50,12 @@ run status ghost
 assert_eq "unknown project fails" 1 "$CODE"
 assert_contains "unknown project explained" "sandbox new ghost" "$OUT"
 
+export FAKE_DOCKER_DOWN=1
+run status
+assert_eq "long status with docker unreachable fails" 1 "$CODE"
+assert_contains "long status names the cause" "cannot reach the Docker server" "$OUT"
+run status --short
+assert_eq "short status with docker unreachable" "🛡 sandbox: docker not reachable" "$OUT"
+unset FAKE_DOCKER_DOWN
+
 finish

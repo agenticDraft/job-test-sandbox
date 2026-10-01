@@ -4,6 +4,7 @@ echo "$*" >> "${FAKE_DOCKER_LOG:?FAKE_DOCKER_LOG not set}"
 has() { local x; for x in $1; do [ "$x" = "$2" ] && return 0; done; return 1; }
 last="${!#}"
 case "$1" in
+  version) [ -z "${FAKE_DOCKER_DOWN:-}" ] && echo 29.0.0; [ -z "${FAKE_DOCKER_DOWN:-}" ]; exit $? ;;
   image) has "$FAKE_DOCKER_IMAGES" "$last"; exit $? ;;
   volume)
     case "$2" in
