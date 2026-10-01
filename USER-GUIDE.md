@@ -5,6 +5,9 @@ subcommand, the guard rules and the raw `docker` commands: docs/reference.md.
 
 Who does it: 💬 tell Claude · 🖥 you, Mac terminal · 🧪 you, code-server · 🌐 you, `sandbox` Chrome profile
 
+Each step names where it runs: (Terminal) = Mac terminal, (Claude) = Claude Code in this repo,
+(code-server) = the code-server terminal in the container, (Browser) = the `sandbox` Chrome profile.
+
 ## Your commands
 
 ```bash
@@ -41,17 +44,17 @@ If Claude Code's `!` does not know `guard-on`:
 
 Example: `firma.zip` arrived by email. The project name is yours: lowercase, digits, dashes.
 
-**0. Before you start** — 🖥 OrbStack icon in the menu bar (if not: Cmd+Space, "OrbStack").
+**0. (Terminal) Before you start** — 🖥 OrbStack icon in the menu bar (if not: Cmd+Space, "OrbStack").
 
 ```bash
 sandbox status   # "No projects..." or a list = Docker works; "cannot reach the Docker server" = start OrbStack
 guard-status     # must say: guard is on
 ```
 
-**1. Vet the sender** — 🌐 unsolicited recruiter, crypto/web3, "just run our repo", urgency,
+**1. (Browser) Vet the sender** — 🌐 unsolicited recruiter, crypto/web3, "just run our repo", urgency,
 unknown domain, company you cannot verify: two or more → scan only, then decide.
 
-**2. Put the code into the sandbox** — it is **copied** into the volume; nothing runs. Never
+**2. (Terminal) Put the code into the sandbox** — it is **copied** into the volume; nothing runs. Never
 open, unzip or clone it on the Mac.
 
 ```bash
@@ -63,7 +66,7 @@ sandbox new firma https://github.com/firma/test.git
 
 A public repo also works as 💬 "new test firma https://github.com/firma/test.git".
 
-**3. Scan** — start Claude here, never in a test folder:
+**3. (Claude) Scan** — start Claude here, never in a test folder:
 
 ```bash
 cd ~/github/agenticDraft/job-test-sandbox && claude
@@ -73,7 +76,7 @@ cd ~/github/agenticDraft/job-test-sandbox && claude
 `work/firma/scan.md`. **Green** → go on. **Question** → read scan.md, you decide. **Red** →
 💬 "remove firma" and run nothing.
 
-**4. Start the work container** (after Green; or 💬 "start firma")
+**4. (Terminal, then Browser) Start the work container** (after Green; or 💬 "start firma")
 
 ```bash
 sandbox up firma   # refuses without Green; prints the password (also in work/firma/password)
@@ -82,7 +85,7 @@ sandbox up firma   # refuses without Green; prints the password (also in work/fi
 🌐 Open `http://127.0.0.1:8443` in the `sandbox` profile and enter the password. Keep
 Restricted Mode on until you have read the scan; close the Chat panel, do not sign in.
 
-**5. Work** — 🧪 code-server terminal (☰ → Terminal → New Terminal); prompt `🧪 SANDBOX firma`:
+**5. (code-server) Work** — 🧪 code-server terminal (☰ → Terminal → New Terminal); prompt `🧪 SANDBOX firma`:
 
 ```bash
 npm ci                          # install scripts are off by default
@@ -92,13 +95,13 @@ npm run dev -- --host 0.0.0.0   # then 🌐 http://127.0.0.1:5173
 No `package.json` at the top → `cd` into the zip's folder first. 💬 Claude helps when asked:
 "run the tests in firma", "fix the failing test in firma" (it applies a patch, you see the diff).
 
-**6. End of the day**
+**6. (Terminal) End of the day**
 
 ```bash
 sandbox stop firma   # next day: sandbox up firma -- your work stays in the volume
 ```
 
-**7. Hand in**
+**7. (code-server, then Terminal) Hand in**
 
 ```bash
 # 🧪 code-server terminal
@@ -109,7 +112,7 @@ sandbox export firma   # writes work/firma/out/firma.zip and firma.bundle
 
 🖥 Send `firma.zip` to the company yourself. Claude never sends or pushes anything.
 
-**8. Clean up**
+**8. (Terminal) Clean up**
 
 ```bash
 sandbox rm firma   # type "firma" to confirm (💬 "remove firma" works too; you confirm the prompt)
