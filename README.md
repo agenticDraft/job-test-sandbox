@@ -11,6 +11,57 @@ their code touch the Mac.
 > `sandbox` runs. You type only the `sandbox …` line; the rest is there so you can see what
 > happens, or do it by hand if `bin/sandbox` ever fails.
 
+## Start here
+
+### Your commands (🖥 Mac terminal, any directory)
+
+These come from `shell/sandbox.zsh` (one line in `~/.zshrc`, Phase 1 / Task 5). Inside Claude
+Code type them with `!` in front, for example `! guard-status`.
+
+| Command | What it does |
+|---|---|
+| `guard-status` | Shows whether Claude's guard is on. Must say "guard is on" before you work on a test. |
+| `guard-on` | Switches the guard on. This is the normal state; you need it only after `guard-off`. |
+| `guard-off` | Switches the guard off, **only** to let Claude edit `bin/`, `tests/` or `.claude/`. Never work on a test like this. |
+| `sandbox <command>` | The sandbox itself: `new`, `scan`, `up`, `stop`, `exec`, `apply`, `export`, `rm`, `status`, `build`. |
+
+If Claude Code's `!` does not know `guard-on`, use the plain form:
+`! mv .claude/settings.json.off .claude/settings.json` (on) /
+`! mv .claude/settings.json .claude/settings.json.off` (off).
+
+### Once per Mac
+
+Do Phase 1 below in order: install OrbStack, lock its settings, `sandbox build`, Chrome
+profile, `~/.zshrc` line, intake hook. Then Phase 7 once.
+
+### Every time you sit down to a test
+
+1. 🖥 `guard-status` → "guard is on". If it says off: `guard-on`.
+2. 🖥 `cd ~/github/agenticDraft/job-test-sandbox && claude` (start Claude **here**, never in a
+   test folder). Its status line shows `🛡 sandbox: …`.
+
+### A new test, in this order
+
+The guard must be on for every step. Nothing from the test touches the Mac: no clone, no
+unzip, no double-click on the zip.
+
+1. 🌐 Vet the sender (Phase 2 / Task 1).
+2. Put the code into the sandbox (Phase 2 / Task 2). This **copies** it into a Docker volume;
+   nothing runs yet:
+   - public git repo: 💬 "new test acme https://github.com/…" or 🖥 `sandbox new acme <url>`;
+   - private git repo: 🖥 `sandbox new acme <url>` (you type the token);
+   - zip: 🖥 `sandbox new acme ~/Downloads/acme.zip` (only you; Claude may not read Downloads).
+3. 💬 "scan acme" → Claude reads the code inside the sandbox and writes
+   `work/acme/scan.md` with `Verdict: Green | Question | Red` (Phase 3).
+4. You read the verdict. Red → 💬 "remove acme". Question → you decide.
+5. 💬 "start acme" or 🖥 `sandbox up acme`, then 🌐 `http://127.0.0.1:8443` (Phase 4).
+6. 🧪 Work in code-server; 💬 Claude helps with `exec` / `apply` when you ask.
+7. 🧪 Commit, 💬 "export acme", 🖥 send it yourself (Phase 5).
+8. 💬 "remove acme" or 🖥 `sandbox rm acme` (Phase 6).
+
+The scan always comes **after** the code is in the sandbox (step 2) and **before** anything
+runs (step 5). `sandbox up` refuses without a Green verdict.
+
 ## Why
 
 Fake "coding test" repos are a known malware delivery channel aimed at developers (the
