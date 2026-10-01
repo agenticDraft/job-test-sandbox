@@ -8,8 +8,8 @@ the steps; read them before changing anything.
 - Built and checked on real Docker (OrbStack): `bin/sandbox`, the guard hook
   (`.claude/hooks/guard.sh`), statusline, `shell/sandbox.zsh`, `boilerplate/Dockerfile`.
   Plan Phase 6 and FIRST-INSTALLATION.md Task 7 passed, except the `npm rebuild` check.
-- Not written yet: the `job-test-scan` skill in `.claude/skills/` (create it with the
-  `skill-creator` skill).
+- The `job-test-scan` skill in `.claude/skills/job-test-scan/` does the scan ("scan <firm>");
+  edit it only with the `skill-creator` skill.
 - Repo is **public**: https://github.com/agenticDraft/job-test-sandbox. Never commit
   anything from `work/` or other private material.
 - Published runbook: https://claude.ai/artifact/P6jREw8p4i9BE8mQD3yLNa — source is

@@ -1,4 +1,4 @@
-# Base image for job tests (README Phase 1 / Task 3; spec Guardrails / Layer 2).
+# Base image for job tests (FIRST-INSTALLATION.md, Task 3; spec Guardrails / Layer 2).
 # Built once with `sandbox build`. Each project gets its own volume and container;
 # this image is never modified per project.
 FROM node:24-bookworm
