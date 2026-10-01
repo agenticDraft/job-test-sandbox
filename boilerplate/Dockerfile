@@ -12,6 +12,7 @@ RUN curl -fsSL https://code-server.dev/install.sh | sh -s -- --method=standalone
 
 # npm install scripts never run; one package at a time: npm rebuild <pkg> --ignore-scripts=false
 ENV NPM_CONFIG_IGNORE_SCRIPTS=true
+ENV LANG=C.UTF-8
 # No credential is ever stored in the container.
 RUN git config --system credential.helper ""
 
