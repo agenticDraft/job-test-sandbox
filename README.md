@@ -165,9 +165,29 @@ Accepted limits:
 
 Three layers, each scoped so normal work outside this repo and its containers is untouched.
 
-**Layer 1 — Claude hook** (`.claude/hooks/guard.sh`, strict; the real boundary; active only
-once `.claude/settings.json` registers it, which is the last setup step). Anything not on the
-allowlist is refused with a message.
+**Layer 1 — Claude hook** (`.claude/hooks/guard.sh`, strict; the real boundary). Anything not
+on the allowlist is refused with a message.
+
+*Scope, on and off.*
+
+- **Scope.** The hook is registered in this repo's `.claude/settings.json`, so it applies only
+  when Claude Code runs in `job-test-sandbox/`. Claude in your other projects never sees it.
+  Your own terminal is not affected at all.
+- **On (the normal state).** `.claude/settings.json` exists. Claude Code loads it
+  automatically when it starts in this repo, and picks up the change in a running session
+  too.
+- **Off (only to let Claude maintain `bin/`, `tests/` or `.claude/`).** Run
+  `mv .claude/settings.json .claude/settings.json.off`. Turn it back on with
+  `mv .claude/settings.json.off .claude/settings.json`. The same file also holds the
+  statusline and the Bash-sandbox exception for `bin/sandbox`, so those go off and on with it.
+- **Check.** Ask Claude to run `cat /etc/hosts`. With the guard on it is refused with
+  "Blocked by the job-test-sandbox guard".
+- **Safety net.** While the guard is off, `bin/sandbox` refuses `new`, `scan`, `up`, `exec`,
+  `apply` and `export` when Claude runs them (it sees `CLAUDECODE=1`) with "the guard is off".
+  `status`, `build`, `stop` and `rm` keep working. From your own terminal nothing is blocked.
+  The check reads `.claude/settings.json` for the `guard.sh` hook; it cannot tell whether
+  Claude Code actually loaded it (for example if all hooks are disabled in your user
+  settings).
 
 - Bash: one line, run from the repo root (no `cd`), plain characters only (no `$`, backslash,
   globs, braces, parentheses, `~`, `=`), redirection only as `2>&1` or `>/dev/null`.
