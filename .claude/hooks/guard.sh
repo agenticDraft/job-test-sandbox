@@ -95,7 +95,7 @@ check_segment() {
     curl|wget) deny "$w1 is not allowed in this repo." ;;
   esac
   case "$READ_ONLY" in *" $w1 "*) return 0 ;; esac
-  deny "'$w1' is not on this repo's allowlist. Use bin/sandbox <command> (README: The sandbox command)."
+  deny "'$w1' is not on this repo's allowlist. Use bin/sandbox <command> (USER-GUIDE.md: The sandbox command)."
 }
 
 check_bash() {
@@ -142,8 +142,8 @@ check_file_tool() {
     case "$p" in /*) ;; "~"*) p="$HOME${p#\~}" ;; *) p="$root/$p" ;; esac
     if inside "$p" "$root"; then
       case "$p" in
-        "$root"/work/*|"$root"/docs/*|"$root"/README.md|"$root"/CLAUDE.md|"$root"/.claude/artifacts/*) ;;
-        *) deny "while the guard is active Claude writes only work/, docs/, README.md, CLAUDE.md and .claude/artifacts/ in this repo; scripts, tests, the rest of .claude/ and .git/ are edited by you ($p)." ;;
+        "$root"/work/*|"$root"/docs/*|"$root"/README.md|"$root"/FIRST-INSTALLATION.md|"$root"/USER-GUIDE.md|"$root"/CLAUDE.md|"$root"/.claude/artifacts/*) ;;
+        *) deny "while the guard is active Claude writes only work/, docs/, README.md, FIRST-INSTALLATION.md, USER-GUIDE.md, CLAUDE.md and .claude/artifacts/ in this repo; scripts, tests, the rest of .claude/ and .git/ are edited by you ($p)." ;;
       esac
     fi
   fi
