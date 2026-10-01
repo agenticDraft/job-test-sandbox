@@ -21,6 +21,13 @@ case "$cmd" in
   bin/sandbox\ *|./bin/sandbox\ *|"$root"/bin/sandbox\ *) exit 0 ;;
 esac
 
+# A lone git commit runs nothing else, so words in its message (clone, unzip, tar) are only
+# text. Anything that could start another program keeps the normal checks below.
+case "$cmd" in
+  *';'*|*'&'*|*'|'*|*$'\n'*|*'$('*|*'`'*|*'<('*|*'>('*) ;;
+  'git commit '*) exit 0 ;;
+esac
+
 B='(^|[^[:alnum:]_./-])'
 grep -Eq "${B}git([[:space:]]+-[^[:space:]]+([[:space:]]+[^-[:space:]][^[:space:]]*)?)*[[:space:]]+clone([[:space:]]|$)" <<<"$cmd" &&
   deny "no git clone on the Mac."
