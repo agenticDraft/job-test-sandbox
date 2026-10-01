@@ -37,8 +37,9 @@ path_ok() {
   return 1
 }
 
-READ_ONLY=" ls cat head tail grep wc jq echo printf pwd date diff file mkdir test true "
-GIT_OK=" status diff log show add commit branch rev-parse ls-files restore stash grep blame "
+READ_ONLY=" ls cat head tail grep wc echo printf pwd date diff test true mkdir "
+GIT_OK=" status diff log show add commit branch rev-parse ls-files "
+GIT_OPTS=" -m -n -p -s -v -1 -5 -10 -20 --stat --oneline --name-only --name-status --cached --staged --short --porcelain "
 
 check_segment() {
   local word t w1 w2
@@ -46,10 +47,10 @@ check_segment() {
   [ $# -eq 0 ] && return 0
   for word in "$@"; do
     t="${word//\"/}"; t="${t//\'/}"
-    t="${t#[0-9]}"; t="${t#>>}"; t="${t#>}"; t="${t#<}"
-    case "$t" in *=/*|*="~"*) t="${t#*=}" ;; esac
+    t="${t#[0-9]}"; t="${t#>}"; t="${t#<}"
     case "$t" in
-      /*|"~"*|*..*) path_ok "$t" write || deny "path outside this repo: $t" ;;
+      -*/*) deny "options with a path attached are not allowed: $t" ;;
+      /*|*..*) path_ok "$t" write || deny "path outside this repo: $t" ;;
     esac
   done
   w1="${1//\"/}"; w1="${w1//\'/}"; w2="${2:-}"
@@ -57,22 +58,19 @@ check_segment() {
     bin/sandbox|./bin/sandbox|"$root/bin/sandbox")
       [ "$w2" = rm ] && WANTS_ASK=1
       return 0 ;;
-    tests/run.sh|./tests/run.sh|"$root/tests/run.sh") return 0 ;;
-    git)
-      [ "$w2" = push ] && deny "git push is yours to run, not Claude's."
-      case "$GIT_OK" in *" $w2 "*) ;; *)
-        deny "git $w2 is not allowed here (no push, clone, fetch, config or -c). Allowed:$GIT_OK" ;; esac
+    tests/run.sh|./tests/run.sh|"$root/tests/run.sh")
+      shift
       for word in "$@"; do
-        case "$word" in
-          -O*|--open-files-in-pager*|--output*|--ext-diff*|--textconv*|--exec*|--upload-pack*|--receive-pack*)
-            deny "git option $word can run a program or write files." ;;
-        esac
+        case "$word" in tests/test_*.sh) ;; *) deny "tests/run.sh takes only tests/test_*.sh files (got $word)." ;; esac
       done
       return 0 ;;
-    cd) return 0 ;;  # the target was checked as a path above; relative targets stay in the repo
-    find)
+    git)
+      case "$GIT_OK" in *" $w2 "*) ;; *) deny "git $w2 is not allowed here. Allowed:$GIT_OK" ;; esac
+      shift 2
       for word in "$@"; do
-        case "$word" in -exec|-execdir|-ok|-okdir|-delete|-fprint|-fprint0|-fprintf|-fls) deny "find $word is not allowed." ;; esac
+        case "$word" in
+          -*) case "$GIT_OPTS" in *" $word "*) ;; *) deny "git option $word is not on the allowlist:$GIT_OPTS" ;; esac ;;
+        esac
       done
       return 0 ;;
     docker) deny "use bin/sandbox instead of docker (for example: bin/sandbox status)." ;;
@@ -85,24 +83,25 @@ check_segment() {
 }
 
 check_bash() {
-  local cmd seg
+  local cmd seg rest
   cmd="$(field .tool_input.command)"
+  [ "$(field .cwd)" = "$root" ] || deny "run commands from the repo root ($root); cd is not allowed."
   case "$cmd" in
+    *$'\n'*) deny "one command line at a time." ;;
     *docker.sock*|*--privileged*|*"-v /Users"*) deny "docker.sock, --privileged and -v /Users are never allowed." ;;
-    *'$'*|*'`'*|*'\'*|*'<('*|*'>('*)
-      deny "variables, command substitution and backslash escapes are not allowed here; write the command out literally." ;;
   esac
-  local redirects
-  redirects="$(printf '%s\n' "$cmd" | awk '{ gsub(/[0-9]*>&[0-9-]*/, ""); gsub(/[0-9]*> *\/dev\/null/, ""); print }')"
-  case "$redirects" in
-    *'>'*) deny "output redirection is not allowed here (only 2>&1 and >/dev/null)." ;;
-  esac
+  # The only redirections allowed: fd duplication (2>&1) and output to /dev/null.
+  rest="$(printf '%s\n' "$cmd" | awk '{ gsub(/[0-9]*>&[0-9]+/, ""); gsub(/[0-9]*> *\/dev\/null/, ""); print }')"
+  # Every other character must be plain: no expansion, glob, brace, subshell, ~, = or redirection.
+  if printf '%s' "$rest" | LC_ALL=C grep -q "[^A-Za-z0-9 _./:,@+\"'|;&<-]"; then
+    deny "only plain words are allowed here: no \$ \` \\ * ? [ ] { } ( ) ~ = ! # > (except 2>&1 and >/dev/null)."
+  fi
   WANTS_ASK=""
   # One segment per simple command. Quotes are not parsed, so ';' or '|' inside quotes
   # splits too: that can only cause a false denial, never a false allow.
   while IFS= read -r seg; do
     check_segment "$seg"
-  done < <(printf '%s\n' "$cmd" | awk '{ gsub(/[0-9]*>&[0-9-]*/, ""); gsub(/&&|\|\||[;|&]/, "\n"); print }')
+  done < <(printf '%s\n' "$rest" | awk '{ gsub(/&&|\|\||[;|&]/, "\n"); print }')
   [ -n "$WANTS_ASK" ] && ask "sandbox rm deletes the project volume and any work not exported. Confirm?"
   exit 0
 }

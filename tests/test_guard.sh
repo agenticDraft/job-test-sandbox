@@ -22,7 +22,7 @@ allows 'git status'
 allows 'git commit -m "Add guard"'
 allows 'ls -la'
 allows 'cat README.md'
-allows 'cd /fake/repo && git status'
+denies 'cd /fake/repo && git status'
 allows 'bin/sandbox apply acme < /fake/scratch/change.patch'
 
 denies 'docker ps'
@@ -76,5 +76,32 @@ denies 'git log --ext-diff'
 allows 'ls > /dev/null'
 allows 'git status 2>/dev/null'
 allows 'bin/sandbox scan acme grep -rn postinstall . 2>&1 | head -20'
+
+denies 'echo x >&bin/sandbox'
+denies 'echo x >& tests/run.sh'
+denies 'git grep -nOsh x'
+denies 'git diff --outp=bin/sandbox'
+denies 'git log --ext'
+denies 'cat {/etc,/x}/passwd'
+denies 'cat =ls'
+denies 'ls *(e:id:)'
+denies 'tests/run.sh work/x.sh'
+denies 'tests/run.sh README.md'
+denies 'cd work && bin/sandbox status'
+denies 'cd && cat .ssh/id_rsa'
+denies 'grep -f/fake/home/x .'
+denies 'git commit -F/fake/home/.ssh/id_rsa'
+denies 'jq -n env'
+denies 'find . -name x'
+denies 'git restore --source=HEAD .claude/hooks/guard.sh'
+denies 'git branch -D main'
+denies 'git stash'
+denies "$(printf 'ls\nnpm i')"
+allows 'tests/run.sh tests/test_guard.sh'
+allows 'git log --oneline -n 5'
+allows 'git commit -m "Add x" -m "Claude-Session: https://claude.ai/code/session_01XT43ApAs9E6zJKP5Yenc7W"'
+OUT="$(jq -n '{tool_name:"Bash", tool_input:{command:"bin/sandbox status"}, cwd:"/fake/repo/work", scratchpad_dir:"/fake/scratch"}' |
+  CLAUDE_PROJECT_DIR=/fake/repo HOME=/fake/home /bin/bash "$GUARD" 2>&1)"; CODE=$?
+assert_eq "commands only from the repo root" 2 "$CODE"
 
 finish
