@@ -1,7 +1,8 @@
 # Sandbox UX design — one command, clear roles, guardrails
 
-Date: 2026-10-01. Status: approved in brainstorming, not built. Extends `README.md`; does not
-replace its threat model, rules or Phase 7 checks.
+Date: 2026-10-01. Status: approved in brainstorming; built and tested against a fake `docker`.
+**Updated after implementation (2026-10-01)**: subcommands, Layer 1 and Layer 2 below describe
+what was built. Extends `README.md`; does not replace its threat model, rules or Phase 7 checks.
 
 ## Goal
 
@@ -40,17 +41,23 @@ Success means:
 
 ### `sandbox` subcommands
 
-- `new <firm> <git-url|zip>` — create volume `jt-<firm>` and fill it (README Phase 2 / Task 2).
+- `build` — build `job-sandbox:base` from `boilerplate/`.
+- `new <firm> <https-git-url|zip>` — create volume `jt-<firm>` and fill it (README Phase 2 /
+  Task 2). A zip without `.git` becomes a repo with one commit "Import from zip".
 - `scan <firm> <read command>` — throwaway container, `--network none`, volume `:ro`.
 - `up <firm> [--accept-question]` — start the work container. **Refuses** unless
-  `work/<firm>/scan.md` contains the verdict `Green`; `Question` needs `--accept-question`;
-  `Red` or a missing file always refuses. Prints URL and generated password once.
+  `work/<firm>/scan.md` has exactly one line starting with `Verdict:` and it reads
+  `Verdict: Green`; `Question` needs `--accept-question`; `Red`, a missing file, a malformed
+  line or several `Verdict:` lines always refuse. Prints URL and generated password. If the
+  container cannot start, the half-made container is removed.
+- `stop <firm>` — `docker stop jt-<firm>` if it is running; the volume stays.
 - `exec <firm> <command>` — `docker exec` into the running work container as `dev`.
 - `apply <firm>` — read a unified diff on stdin, run `git apply` inside the container, print
   `git diff --stat`. Lets Claude change test code without the code touching the Mac disk.
-- `export <firm>` — `git bundle` + `git archive` into `work/<firm>/out/`.
-- `rm <firm>` — asks for confirmation (typing the firm name), then removes container and
-  volume.
+- `export <firm>` — `git bundle` + `git archive` into `work/<firm>/out/`, written to `.tmp`
+  and moved into place only on success.
+- `rm <firm> [--yes]` — asks for confirmation (typing the firm name, or `--yes` without a
+  terminal), then removes container and volume.
 - `status [firm] [--short]` — per `jt-*`: volume present, scan verdict, container state, and
   one line "next: …". `--short` prints one line for the statusline.
 
@@ -89,19 +96,34 @@ Legend: 💬 tell Claude · 🖥 Mac terminal · 🧪 code-server · 🌐 browse
 
 ### Layer 1 — Claude hook (strict; only when Claude runs in this repo)
 
-Allowlist; anything not listed is refused with a message naming the correct command.
+Allowlist; anything not listed is refused with a message naming the correct command. Active
+only once `.claude/settings.json` registers it.
 
-- Allowed: `bin/sandbox <anything>`; reading and writing files inside this repo except
-  `.claude/settings*.json` and `.claude/hooks/`; `git` except `push`.
-- Refused explicitly (with a reason): direct `docker`; `npm`, `npx`, `node`, `pnpm`, `yarn`;
-  `curl`, `wget`; `cd` or paths outside the repo; `git push`; any mention of `docker.sock`,
-  `--privileged`, `-v /Users`.
+- Bash, strict: one line, run from the repo root (no `cd`), plain characters only (no `$`,
+  backslash, globs, braces, parentheses, `~`, `=`), redirection only `2>&1` or `>/dev/null`.
+  Allowed commands: `bin/sandbox <anything>`, `tests/run.sh [tests/test_*.sh]`, `git` with a
+  fixed set of subcommands (`status diff log show add commit branch rev-parse ls-files`) and
+  options, and `ls cat head tail grep wc echo printf pwd date diff test true mkdir`. Paths
+  outside the repo, the scratchpad and Claude's project memory are refused.
+- Asks for confirmation: `bin/sandbox rm` and `bin/sandbox up <firm> --accept-question`.
+- Refused explicitly (with a reason): direct `docker`; `npm`, `npx`, `node`, `pnpm`, `yarn`,
+  `bun`; `curl`, `wget`; `git push` and every other git subcommand not listed; any mention of
+  `docker.sock`, `--privileged`, `-v /Users`.
+- File tools: Read/Grep/Glob inside the repo, the scratchpad and `~/.claude`. Write, Edit,
+  MultiEdit and NotebookEdit inside the repo only under `work/`, `docs/`, `README.md` and
+  `CLAUDE.md`; scripts, tests, `.claude/` and `.git/` are edited by you.
+- Tools that cannot run programs or touch files (Agent, Task, Skill, ToolSearch, TodoWrite,
+  task tools, AskUserQuestion, WebFetch, WebSearch, Artifact tools, SendMessage, plan-mode
+  tools) are allowed. Every other tool is refused, including `Monitor`, `KillShell`,
+  `BashOutput` and every `mcp__*` tool.
 - Exact `PreToolUse` hook input/exit-code contract and `permissions.deny` syntax are taken from
   the official Claude Code documentation at implementation time, not from memory.
 
 ### Layer 2 — Container defaults (only inside `job-sandbox:base` containers)
 
-- `/etc/npmrc`: `ignore-scripts=true`. `npm rebuild <pkg>` remains the deliberate exception.
+- `ENV NPM_CONFIG_IGNORE_SCRIPTS=true` (not `/etc/npmrc`). The deliberate exception, one
+  package at a time: `npm rebuild <pkg> --ignore-scripts=false`.
+- `ENV LANG=C.UTF-8`.
 - `git config --system credential.helper ""`; the prompt shows a warning if a credential
   helper is set.
 - Prompt: `🧪 SANDBOX <firm> ~/project $` on an orange background (`<firm>` from the container

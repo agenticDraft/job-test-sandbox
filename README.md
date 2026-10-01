@@ -116,10 +116,15 @@ Every step below is marked with where it happens:
 - `sandbox scan <firm> <read command>` — throwaway container, no network, volume `:ro`.
 - `sandbox up <firm> [--accept-question]` — start code-server; needs `Verdict: Green`
   (`Question` needs the flag). Prints the URL and the password (stored in `work/<firm>/password`).
+  If the container cannot start (for example ports 8443/5173 are taken by another project's
+  container), the half-made container is removed; stop the other one with `sandbox stop <other>`.
+- `sandbox stop <firm>` — stop the container; the volume and your work stay. `sandbox up`
+  starts it again.
 - `sandbox exec <firm> <command>` — `docker exec` into the running container as `dev`.
 - `sandbox apply <firm> < change.patch` — `git apply` the patch inside the container and
   print `git diff --stat`.
-- `sandbox export <firm>` — bundle and zip into `work/<firm>/out/`.
+- `sandbox export <firm>` — bundle and zip into `work/<firm>/out/`. On failure no partial
+  file is left behind.
 - `sandbox rm <firm> [--yes]` — delete container and volume; asks you to type the firm name,
   or needs `--yes` when there is no terminal.
 - `sandbox status [firm] [--short]` — per project: scan verdict, container state, next step.
@@ -138,7 +143,14 @@ Accepted limits:
   repo. `bin/`, `tests/`, `shell/`, `boilerplate/`, `.claude/` and `.git/` are edited by you;
   to let Claude maintain them, turn the hook off first (edit `.claude/settings.json`).
 - The hook allowlist is strict, so new kinds of commands cause refusals or prompts until the
-  allowlist is extended.
+  allowlist is extended. Scan commands must be plain words too, for example
+  `bin/sandbox scan acme grep -rn -e preinstall -e postinstall .` or
+  `bin/sandbox scan acme find . -name package.json`: no `*`, no `|` inside a pattern (use one
+  `-e` per alternative), no `(` and no `=`.
+- When Claude runs `sandbox up <firm> --accept-question` (or `sandbox rm`), the hook asks you
+  to confirm first.
+- The hook also refuses every tool it does not know (for example `Monitor` and all MCP tools,
+  such as browser or IDE tools). Turn the hook off to use them.
 - In exchange: nothing worth stealing in the container, and no Claude tool touches test files
   on the Mac.
 
@@ -154,10 +166,15 @@ allowlist is refused with a message.
   globs, braces, parentheses, `~`, `=`), redirection only as `2>&1` or `>/dev/null`.
 - Allowed commands: `bin/sandbox`, `tests/run.sh`, a fixed set of `git` subcommands and options
   (no `push`), and `ls cat head tail grep wc echo printf pwd date diff test true mkdir`. Paths
-  outside the repo and the scratchpad are refused. `bin/sandbox rm` asks you to confirm.
-- File tools: Read/Grep/Glob inside the repo, the scratchpad and `~/.claude`; Write/Edit as
-  listed in Working with Claude.
-- Commit messages: `git commit -m "subject" -m "trailer"`; no heredocs.
+  outside the repo and the scratchpad are refused. `bin/sandbox rm` and
+  `bin/sandbox up <firm> --accept-question` ask you to confirm.
+- File tools: Read/Grep/Glob inside the repo, the scratchpad and `~/.claude`;
+  Write/Edit/MultiEdit/NotebookEdit as listed in Working with Claude.
+- Tools that cannot run programs or touch files (Agent, Skill, TodoWrite, WebFetch,
+  WebSearch, Artifact and similar) are allowed. Every other tool is refused, including
+  `Monitor`, `KillShell`, `BashOutput` and every MCP tool.
+- Commit messages: `git commit -m "subject" -m "trailer"`; no heredocs. Plain ASCII words
+  only: no `..`, no word in the message starting with `-`, no absolute paths.
 
 **Layer 2 — container defaults** (only inside `job-sandbox:base` containers).
 
@@ -244,15 +261,20 @@ docker run --rm --user dev --cap-drop=ALL --security-opt no-new-privileges \
 ```
 
 From a zip (emailed or downloaded; **do not double-click it**). It is streamed through
-stdin, so the Mac never mounts or unpacks it:
+stdin, so the Mac never mounts or unpacks it. The zip should unpack at the project root
+(`package.json` at the top, not inside a single folder). If it has no `.git`, a git repo is
+created with one commit "Import from zip", so `sandbox export` works later:
 
 ```bash
 sandbox new acme ~/Downloads/acme-test.zip
 # wraps:
 docker volume create jt-acme
 docker run --rm -i --user dev --cap-drop=ALL --security-opt no-new-privileges \
-  -v jt-acme:/home/dev/project job-sandbox:base \
-  sh -c 'cat > /tmp/t.zip && unzip -q /tmp/t.zip -d /home/dev/project' < ~/Downloads/acme-test.zip
+  -v jt-acme:/home/dev/project -w /home/dev/project job-sandbox:base \
+  sh -c 'cat > /tmp/t.zip && unzip -q /tmp/t.zip -d /home/dev/project && if [ ! -d .git ]; then
+    git init -q && git add -A &&
+    git -c user.name=sandbox -c user.email=sandbox@localhost commit -qm "Import from zip"; fi' \
+  < ~/Downloads/acme-test.zip
 ```
 
 A private repo needs read access: use a fine-grained token with **read-only** access to
@@ -372,7 +394,7 @@ scripts is only known by trying.
 Open `http://127.0.0.1:8443` in the sandbox browser profile. Start the app with
 `npm run dev -- --host 0.0.0.0` (Vite) and open `http://127.0.0.1:5173`. Install
 editor extensions only from well-known publishers (code-server uses Open VSX, not the
-Microsoft marketplace). Stop the container (`docker stop jt-acme`) when not working on it.
+Microsoft marketplace). Stop the container (`sandbox stop acme`) when not working on it.
 
 Claude can help from the Mac without touching the code on disk: it reads with
 `sandbox scan`, runs commands with `sandbox exec acme <command>`, and changes files with
@@ -393,14 +415,21 @@ sandbox export acme
 # wraps:
 mkdir -p work/acme/out
 docker run --rm --network none --user dev -v jt-acme:/src:ro -w /src job-sandbox:base \
-  git bundle create - --all > work/acme/out/acme.bundle
+  git bundle create - --all > work/acme/out/acme.bundle.tmp   # moved to acme.bundle on success
 docker run --rm --network none --user dev -v jt-acme:/src:ro -w /src job-sandbox:base \
-  git archive --format=zip HEAD > work/acme/out/acme.zip
+  git archive --format=zip HEAD > work/acme/out/acme.zip.tmp  # moved to acme.zip on success
 ```
 
-Send the zip, or push the bundle from the Mac **in a terminal only**:
-`git clone acme.bundle tmp && cd tmp && git push <their-remote>`. Cloning a bundle does not
-run anything, but do not open that folder in an editor or run npm in it.
+Send the zip, or push the bundle from the Mac **in a terminal only**. Clone the bundle
+**outside this repo**, never inside it:
+
+```bash
+cd ~ && git clone ~/github/agenticDraft/job-test-sandbox/work/acme/out/acme.bundle acme-push
+cd acme-push && git push <their-remote>
+```
+
+Cloning a bundle does not run anything, but do not open that folder in an editor or run npm
+in it.
 
 Push, from inside the container with a fine-grained token limited to that one
 repo, typed when git prompts and not stored (`git config --global credential.helper` stays
