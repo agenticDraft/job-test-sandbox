@@ -104,4 +104,18 @@ OUT="$(jq -n '{tool_name:"Bash", tool_input:{command:"bin/sandbox status"}, cwd:
   CLAUDE_PROJECT_DIR=/fake/repo HOME=/fake/home /bin/bash "$GUARD" 2>&1)"; CODE=$?
 assert_eq "commands only from the repo root" 2 "$CODE"
 
+denies 'git show "--output" bin/sandbox'
+denies "git show '--output' bin/sandbox"
+denies 'git diff "--outp" bin/sandbox'
+denies 'git log "--ext-diff"'
+denies 'git branch "-D" main'
+denies 'git commit "--amend"'
+denies 'git branch -m main other'
+denies 'echo x >&2bin'
+denies 'echo x 1>&2tests'
+denies 'echo x >&1README.md'
+denies 'echo x > /dev/nullx'
+allows 'bin/sandbox status 2>&1'
+allows 'git status 2>/dev/null | head -3'
+
 finish

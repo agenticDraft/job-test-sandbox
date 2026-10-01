@@ -42,18 +42,18 @@ GIT_OK=" status diff log show add commit branch rev-parse ls-files "
 GIT_OPTS=" -m -n -p -s -v -1 -5 -10 -20 --stat --oneline --name-only --name-status --cached --staged --short --porcelain "
 
 check_segment() {
-  local word t w1 w2
-  set -f; set -- $1; set +f
+  local word t w1 w2 seg
+  seg="${1//\"/}"; seg="${seg//\'/}"
+  set -f; set -- $seg; set +f
   [ $# -eq 0 ] && return 0
   for word in "$@"; do
-    t="${word//\"/}"; t="${t//\'/}"
-    t="${t#[0-9]}"; t="${t#>}"; t="${t#<}"
+    t="${word#[0-9]}"; t="${t#>}"; t="${t#<}"
     case "$t" in
       -*/*) deny "options with a path attached are not allowed: $t" ;;
       /*|*..*) path_ok "$t" write || deny "path outside this repo: $t" ;;
     esac
   done
-  w1="${1//\"/}"; w1="${w1//\'/}"; w2="${2:-}"
+  w1="$1"; w2="${2:-}"
   case "$w1" in
     bin/sandbox|./bin/sandbox|"$root/bin/sandbox")
       [ "$w2" = rm ] && WANTS_ASK=1
@@ -69,7 +69,8 @@ check_segment() {
       shift 2
       for word in "$@"; do
         case "$word" in
-          -*) case "$GIT_OPTS" in *" $word "*) ;; *) deny "git option $word is not on the allowlist:$GIT_OPTS" ;; esac ;;
+          -*) case "$GIT_OPTS" in *" $word "*) ;; *) deny "git option $word is not on the allowlist:$GIT_OPTS" ;; esac
+              [ "$word" = -m ] && [ "$w2" != commit ] && deny "-m is allowed only for git commit." ;;
         esac
       done
       return 0 ;;
@@ -91,7 +92,7 @@ check_bash() {
     *docker.sock*|*--privileged*|*"-v /Users"*) deny "docker.sock, --privileged and -v /Users are never allowed." ;;
   esac
   # The only redirections allowed: fd duplication (2>&1) and output to /dev/null.
-  rest="$(printf '%s\n' "$cmd" | awk '{ gsub(/[0-9]*>&[0-9]+/, ""); gsub(/[0-9]*> *\/dev\/null/, ""); print }')"
+  rest="$(printf '%s\n' "$cmd" | awk '{ gsub(/(^| )[12]?>&[12]( |$)/, " "); gsub(/(^| )[12]?> ?\/dev\/null( |$)/, " "); print }')"
   # Every other character must be plain: no expansion, glob, brace, subshell, ~, = or redirection.
   if printf '%s' "$rest" | LC_ALL=C grep -q "[^A-Za-z0-9 _./:,@+\"'|;&<-]"; then
     deny "only plain words are allowed here: no \$ \` \\ * ? [ ] { } ( ) ~ = ! # > (except 2>&1 and >/dev/null)."
