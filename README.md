@@ -3,6 +3,9 @@
 Run take-home tests (small React apps and similar) from unknown companies without letting
 their code touch the Mac.
 
+**Overview page:** https://claude.ai/artifact/P6jREw8p4i9BE8mQD3yLNa (architecture, rules,
+guardrails and accepted risks on one page).
+
 > **Status:** `bin/sandbox`, the Claude guard hook, the statusline, the Mac zsh guard and
 > `boilerplate/Dockerfile` are tested against a fake `docker` and checked on real Docker
 > (OrbStack): the verification in FIRST-INSTALLATION.md (Task 7) and the checks in
