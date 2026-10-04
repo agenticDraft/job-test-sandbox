@@ -125,14 +125,18 @@ is allowed: it streams the zip into the volume without unpacking it on the Mac. 
 ## Task 7 — Verify
 
 **Who:** 🖥 you (these call `docker` directly, which the guard does not let Claude do). A
-project `acme` must exist and be running for checks 3–5: 🖥 `sandbox new acme
+project `acme` must exist and be running for checks 3–6: 🖥 `sandbox new acme
 https://github.com/agenticDraft/job-test-sandbox.git`, write `Verdict: Green` into
 `work/acme/scan.md`, `sandbox up acme`, run the checks, then `sandbox rm acme`.
 
 Run once after Tasks 1-6, and again whenever the image or scripts change. Every line must
 print the expected result. Then run the checks in Phase 6 of
 `docs/superpowers/plans/2026-10-01-sandbox-ux.md` (guard hook, container defaults, zsh guard,
-scan gate, apply, statusline); they cover everything the five checks below do not.
+scan gate, apply, statusline); they cover everything the six checks below do not.
+
+Check 6 needs two test servers on the Mac, each in its own terminal tab, stopped with Ctrl-C
+afterwards: `python3 -m http.server 18765 --bind 127.0.0.1 --directory "$(mktemp -d)"` and
+`python3 -m http.server 18766 --bind 0.0.0.0 --directory "$(mktemp -d)"`.
 
 ```bash
 # 1. Image runs as non-root
@@ -152,4 +156,14 @@ docker port jt-acme                                     # expect: 127.0.0.1:8443
 
 # 5. All capabilities dropped
 docker exec jt-acme grep CapEff /proc/self/status       # expect: 0000000000000000
+
+# 6. Work container cannot reach the Mac or the LAN; npm and code-server still work
+LAN="$(ipconfig getifaddr en0)"
+for u in host.docker.internal:18765 host.docker.internal:18766 "$LAN:18766"; do
+  docker exec jt-acme curl -sS -m 4 -o /dev/null -w "$u %{http_code}\n" "http://$u/"
+done                                                    # expect: each 000, none 200
+docker exec jt-acme curl -sS -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/
+                                                        # expect: 200
+curl -sS -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8443/
+                                                        # expect: 302 or 200
 ```
