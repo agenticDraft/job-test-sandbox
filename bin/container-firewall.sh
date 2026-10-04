@@ -1,10 +1,22 @@
 # Runs inside the firewall helper container (bin/sandbox firewall_container), never on the Mac.
-# Replaces the filter tables of the work container's network namespace: replies pass; the Mac
-# (OrbStack host 0.250.250.254 and whatever host.docker.internal / host.orb.internal resolve to)
-# and private, link-local and multicast ranges are rejected; everything else (the internet, DNS at
-# 0.250.250.200) is allowed. Why: README.md, Residual risks.
+# Replaces the filter tables of the work container's network namespace: replies and DNS pass; the
+# Mac (OrbStack host 0.250.250.254 and whatever host.docker.internal / host.orb.internal resolve
+# to), the rest of 0.0.0.0/8 (OrbStack's undocumented services), 198.18.0.0/15 and private,
+# link-local and multicast ranges are rejected; the internet is allowed. Why: README.md, Residual
+# risks. RESOLV_CONF is only set by tests.
 set -eu
 NAMES="host.docker.internal host.orb.internal"
+
+# IPv4 nameservers of the container (OrbStack: 0.250.250.200) stay reachable on port 53 only.
+dns_accept=""
+for ns in $({ sed -n 's/^nameserver[[:space:]]*//p' "${RESOLV_CONF:-/etc/resolv.conf}" 2>/dev/null || true; }); do
+  case "$ns" in *:*) continue ;; esac
+  for proto in udp tcp; do
+    rule="-A OUTPUT -d $ns -p $proto --dport 53 -j ACCEPT"
+    if [ -z "$dns_accept" ]; then dns_accept="$rule"; else dns_accept="$dns_accept
+$rule"; fi
+  done
+done
 
 # resolve <ahostsv4|ahostsv6> [always-included address]: unique addresses of NAMES, one per line.
 resolve() {
@@ -13,8 +25,8 @@ resolve() {
   } | sort -u
 }
 
-# table <extra accept rule or ""> <target>...: a full filter table, so loading it replaces the
-# old one and a rerun never stacks rules.
+# table <extra accept rules, one per line, or ""> <target>...: a full filter table, so loading it
+# replaces the old one and a rerun never stacks rules.
 table() {
   extra="$1"; shift
   echo '*filter'
@@ -30,7 +42,7 @@ table() {
 mac4="$(resolve ahostsv4 0.250.250.254)"
 mac6="$(resolve ahostsv6)"
 # Word splitting of the address lists is intended.
-table "" $mac4 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 169.254.0.0/16 224.0.0.0/4 |
-  iptables-restore
+table "$dns_accept" $mac4 0.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 \
+  169.254.0.0/16 198.18.0.0/15 224.0.0.0/4 | iptables-restore
 # ICMPv6 stays open: neighbour discovery needs it, and the ff00::/8 reject would block it.
 table "-A OUTPUT -p ipv6-icmp -j ACCEPT" $mac6 fc00::/7 fe80::/10 ff00::/8 | ip6tables-restore

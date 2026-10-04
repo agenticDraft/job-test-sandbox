@@ -159,7 +159,7 @@ docker exec jt-acme grep CapEff /proc/self/status       # expect: 00000000000000
 
 # 6. Work container cannot reach the Mac or the LAN; npm and code-server still work
 LAN="$(ipconfig getifaddr en0)"
-for u in host.docker.internal:18765 host.docker.internal:18766 "$LAN:18766"; do
+for u in host.docker.internal:18765 host.docker.internal:18766 0.250.250.1:18765 "$LAN:18766"; do
   docker exec jt-acme curl -sS -m 4 -o /dev/null -w "$u %{http_code}\n" "http://$u/"
 done                                                    # expect: each 000, none 200
 docker exec jt-acme curl -sS -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/

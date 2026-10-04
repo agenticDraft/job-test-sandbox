@@ -100,9 +100,9 @@ containers is untouched. Details: docs/reference.md, Guardrails.
 - **Container → Mac services.** Containers can reach servers on the Mac through
   `host.docker.internal`, including servers bound only to `127.0.0.1` (tested on OrbStack,
   2026-10-03). OrbStack has no setting that blocks this for Docker containers, so every
-  `sandbox up` firewalls the work container: the Mac (`0.250.250.254`) and private ranges are
-  rejected from inside its own network namespace (`bin/container-firewall.sh`), and nothing
-  on the Mac is touched. A container started outside `sandbox up` (the OrbStack app,
+  `sandbox up` firewalls the work container: the Mac (`0.250.250.254`), the rest of OrbStack's
+  `0.0.0.0/8` except DNS, and private ranges are rejected from inside its own network namespace
+  (`bin/container-firewall.sh`), and nothing on the Mac is touched. A container started outside `sandbox up` (the OrbStack app,
   `docker start`) has no rules; run `sandbox up` on it.
 - **Container → internet.** The container needs the internet for npm, so malware could
   phone home or mine crypto. The home network (router, NAS) is blocked by the same firewall

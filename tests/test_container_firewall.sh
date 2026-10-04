@@ -23,6 +23,9 @@ cat > "$FAKE_OUT/v6"; [ "${FAKE_RESTORE_FAIL:-}" != v6 ]
 EOF
 chmod +x "$T/bin/"*
 export FAKE_OUT="$T"
+# OrbStack's container DNS; an IPv6 nameserver must be ignored by the IPv4 table.
+printf 'search local\nnameserver 0.250.250.200\nnameserver fd07:b51a::1\n' > "$T/resolv.conf"
+export RESOLV_CONF="$T/resolv.conf"
 fw() { : > "$T/v4"; : > "$T/v6"; OUT="$(PATH="$T/bin:/usr/bin:/bin" /bin/sh "$ROOT/bin/container-firewall.sh" 2>&1)"; CODE=$?; }
 
 export FAKE_GETENT_V4="0.250.250.254" FAKE_GETENT_V6="" FAKE_RESTORE_FAIL=""
@@ -33,12 +36,16 @@ assert_eq "OrbStack: IPv4 table" "*filter
 :FORWARD ACCEPT [0:0]
 :OUTPUT ACCEPT [0:0]
 -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+-A OUTPUT -d 0.250.250.200 -p udp --dport 53 -j ACCEPT
+-A OUTPUT -d 0.250.250.200 -p tcp --dport 53 -j ACCEPT
 -A OUTPUT -d 0.250.250.254 -j REJECT
+-A OUTPUT -d 0.0.0.0/8 -j REJECT
 -A OUTPUT -d 10.0.0.0/8 -j REJECT
 -A OUTPUT -d 172.16.0.0/12 -j REJECT
 -A OUTPUT -d 192.168.0.0/16 -j REJECT
 -A OUTPUT -d 100.64.0.0/10 -j REJECT
 -A OUTPUT -d 169.254.0.0/16 -j REJECT
+-A OUTPUT -d 198.18.0.0/15 -j REJECT
 -A OUTPUT -d 224.0.0.0/4 -j REJECT
 COMMIT" "$(cat "$T/v4")"
 assert_eq "OrbStack: IPv6 table" "*filter
@@ -64,6 +71,13 @@ assert_contains "other host address rejected" "-A OUTPUT -d 0.250.250.253 -j REJ
 assert_contains "OrbStack address kept as well" "-A OUTPUT -d 0.250.250.254 -j REJECT" "$(cat "$T/v4")"
 assert_contains "IPv6 host address rejected" "-A OUTPUT -d fd07:b51a::254 -j REJECT" "$(cat "$T/v6")"
 assert_eq "each address once" 1 "$(grep -c '0.250.250.254' "$T/v4")"
+
+export RESOLV_CONF="$T/missing.conf" FAKE_GETENT_V4="0.250.250.254" FAKE_GETENT_V6=""
+fw
+assert_eq "no resolv.conf: exit 0" 0 "$CODE"
+assert_not_contains "no resolv.conf: no DNS exception" "--dport 53" "$(cat "$T/v4")"
+assert_contains "no resolv.conf: OrbStack range still rejected" "-A OUTPUT -d 0.0.0.0/8 -j REJECT" "$(cat "$T/v4")"
+export RESOLV_CONF="$T/resolv.conf"
 
 export FAKE_GETENT_V4="0.250.250.254" FAKE_GETENT_V6="" FAKE_RESTORE_FAIL=v4
 fw
