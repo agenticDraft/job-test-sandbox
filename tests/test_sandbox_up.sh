@@ -67,6 +67,15 @@ assert_contains "firewall fails: names the fix" "sandbox build" "$OUT"
 assert_not_contains "firewall fails: no password" "Password:" "$OUT"
 export FAKE_DOCKER_FAIL_ON=""
 
+# A missing rules script must not hand out an unfirewalled container.
+mkdir -p "$T/norules/bin"
+cp "$ROOT/bin/sandbox" "$T/norules/bin/sandbox"
+clear_log
+OUT="$("$T/norules/bin/sandbox" up acme </dev/null 2>&1)"; CODE=$?
+assert_eq "rules script missing: exit 1" 1 "$CODE"
+assert_contains "rules script missing: container stopped" "stop jt-acme" "$(log)"
+assert_not_contains "rules script missing: no password" "Password:" "$OUT"
+
 export FAKE_DOCKER_EXIT=1
 clear_log
 run up acme

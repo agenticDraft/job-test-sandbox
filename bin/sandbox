@@ -193,8 +193,11 @@ cmd_status() {
 # bin/container-firewall.sh; jt-<firm> keeps --cap-drop=ALL, so code in it cannot undo the rules.
 # A restart loses them, so every up reruns it.
 firewall_container() {
-  if ! docker run --rm --network "container:jt-$1" --user root --cap-drop=ALL --cap-add NET_ADMIN \
-    --security-opt no-new-privileges "$IMAGE" sh -c "$(cat "$ROOT/bin/container-firewall.sh")" >/dev/null; then
+  local rules
+  # An empty sh -c would succeed and load nothing, so a missing script counts as a failure.
+  rules="$(cat "$ROOT/bin/container-firewall.sh" 2>/dev/null)" || rules=""
+  if [ -z "$rules" ] || ! docker run --rm --network "container:jt-$1" --user root --cap-drop=ALL \
+    --cap-add NET_ADMIN --security-opt no-new-privileges "$IMAGE" sh -c "$rules" >/dev/null; then
     docker stop "jt-$1" >/dev/null 2>&1 || true
     die "could not firewall jt-$1, so it was stopped. If the image predates the firewall, run: sandbox build"
   fi
