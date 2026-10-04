@@ -188,6 +188,18 @@ cmd_status() {
   done
 }
 
+# README.md, Residual risks: the work container must not reach the Mac (OrbStack host, also its
+# 127.0.0.1) or the LAN. A helper joins its network namespace with only NET_ADMIN and loads
+# bin/container-firewall.sh; jt-<firm> keeps --cap-drop=ALL, so code in it cannot undo the rules.
+# A restart loses them, so every up reruns it.
+firewall_container() {
+  if ! docker run --rm --network "container:jt-$1" --user root --cap-drop=ALL --cap-add NET_ADMIN \
+    --security-opt no-new-privileges "$IMAGE" sh -c "$(cat "$ROOT/bin/container-firewall.sh")" >/dev/null; then
+    docker stop "jt-$1" >/dev/null 2>&1 || true
+    die "could not firewall jt-$1, so it was stopped. If the image predates the firewall, run: sandbox build"
+  fi
+}
+
 cmd_up() {
   local firm="${1:-}" accept="${2:-}"
   check_firm "$firm"
@@ -216,6 +228,7 @@ cmd_up() {
         die "could not start jt-$firm (are ports 8443/5173 used by another project? sandbox stop <other>)"
       fi ;;
   esac
+  firewall_container "$firm"
   local pw="(missing: work/$firm/password)"
   if [ -f "$pwfile" ]; then pw="$(cat "$pwfile")"; fi
   echo "Open http://127.0.0.1:8443 in the sandbox browser profile. Password: $pw"

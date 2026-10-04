@@ -49,6 +49,24 @@ pw="$SANDBOX_WORK_DIR/acme/password"
 assert_eq "password file is private" 600 "$(stat -f %Lp "$pw")"
 assert_contains "password printed" "Password: $(cat "$pw")" "$OUT"
 
+# Every up firewalls the container (README.md, Residual risks: Container → Mac services).
+fw="run --rm --network container:jt-acme --user root --cap-drop=ALL --cap-add NET_ADMIN --security-opt no-new-privileges job-sandbox:base sh -c"
+assert_contains "new container: firewalled" "$fw" "$(log)"
+assert_contains "firewall loads both tables" "ip6tables-restore" "$(log)"
+assert_not_contains "firewall helper mounts nothing" " -v " "$(log | grep -- '--network container:')"
+assert_not_contains "firewall replaces, never appends" "--noflush" "$(log)"
+assert_eq "firewall runs after the start" "run -d|run --" "$(log | grep -E '^run (-d|--rm --network)' | cut -c1-6 | paste -sd'|' -)"
+
+export FAKE_DOCKER_FAIL_ON="--network container:"
+clear_log
+run up acme
+assert_eq "firewall fails: exit 1" 1 "$CODE"
+assert_contains "firewall fails: container stopped" "stop jt-acme" "$(log)"
+assert_contains "firewall fails: says so" "could not firewall jt-acme" "$OUT"
+assert_contains "firewall fails: names the fix" "sandbox build" "$OUT"
+assert_not_contains "firewall fails: no password" "Password:" "$OUT"
+export FAKE_DOCKER_FAIL_ON=""
+
 export FAKE_DOCKER_EXIT=1
 clear_log
 run up acme
@@ -62,10 +80,13 @@ clear_log
 run up acme
 assert_contains "stopped container is restarted" "start jt-acme" "$(log)"
 assert_not_contains "stopped container is not recreated" "run -d" "$(log)"
+assert_contains "restarted container: firewalled" "$fw" "$(log)"
 
 export FAKE_DOCKER_STOPPED="" FAKE_DOCKER_RUNNING="jt-acme"
+clear_log
 run up acme
 assert_contains "running container reported" "already running" "$OUT"
+assert_contains "running container: firewalled again" "$fw" "$(log)"
 
 clear_log
 run stop acme

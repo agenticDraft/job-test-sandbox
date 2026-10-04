@@ -8,6 +8,7 @@ setup() {
   export SANDBOX_WORK_DIR="$T/work"
   export FAKE_DOCKER_VOLUMES="" FAKE_DOCKER_RUNNING="" FAKE_DOCKER_STOPPED="" FAKE_DOCKER_EXIT=0
   export FAKE_DOCKER_IMAGES="job-sandbox:base"
+  export FAKE_DOCKER_FAIL_ON=""
   export PATH="$ROOT/tests/fakebin:/usr/bin:/bin"
   # Tests run as if from your own terminal; test_sandbox_guard_required.sh sets CLAUDECODE itself.
   unset CLAUDECODE
