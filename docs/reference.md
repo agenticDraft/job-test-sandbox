@@ -309,6 +309,15 @@ start by itself.
 `0.0.0.0` inside the container is needed so the port forward reaches it; on the Mac
 side it is bound to `127.0.0.1`. One project runs at a time because the ports are fixed.
 
+After it starts or restarts the container, and also when it is already running, `sandbox up`
+firewalls it: a short-lived helper container joins its network namespace with only
+`NET_ADMIN` and loads `bin/container-firewall.sh`, which rejects the Mac (`0.250.250.254` and
+whatever `host.docker.internal` resolves to), the rest of `0.0.0.0/8` where OrbStack keeps its
+own services, `198.18.0.0/15`, and private, link-local and multicast ranges. The internet and
+DNS (the nameservers in the container's `/etc/resolv.conf`, port 53 only) stay open. If the rules cannot be loaded, `sandbox up` stops the
+container and prints no password; an image older than the firewall needs `sandbox build`.
+Nothing on the Mac is listed or stopped (README.md, Residual risks).
+
 ### Task 2 — Install dependencies without scripts
 
 **Who:** 🧪 you in the code-server terminal, or 💬 "install dependencies in acme" (Claude runs

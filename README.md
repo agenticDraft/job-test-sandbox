@@ -3,6 +3,9 @@
 Run take-home tests (small React apps and similar) from unknown companies without letting
 their code touch the Mac.
 
+**Overview page:** https://claude.ai/artifact/P6jREw8p4i9BE8mQD3yLNa (architecture, rules,
+guardrails and accepted risks on one page).
+
 > **Status:** `bin/sandbox`, the Claude guard hook, the statusline, the Mac zsh guard and
 > `boilerplate/Dockerfile` are tested against a fake `docker` and checked on real Docker
 > (OrbStack): the verification in FIRST-INSTALLATION.md (Task 7) and the checks in
@@ -95,13 +98,17 @@ containers is untouched. Details: docs/reference.md, Guardrails.
 ## Residual risks (accepted)
 
 - **Container → Mac services.** Containers can reach servers on the Mac through
-  `host.docker.internal`. Whether OrbStack exposes services bound only to `127.0.0.1` on
-  the Mac this way is not stated in its docs and has not been tested here. While a test
-  container runs, do not keep other local dev servers or admin panels open.
-- **Container → internet and LAN.** The container needs the internet for npm, so malware
-  could phone home, mine crypto or probe the home network (router, NAS). There is nothing
-  to steal inside, the CPU and memory limits cap the damage, and you stop the container
-  when idle.
+  `host.docker.internal`, including servers bound only to `127.0.0.1` (tested on OrbStack,
+  2026-10-03). OrbStack has no setting that blocks this for Docker containers, so every
+  `sandbox up` firewalls the work container: the Mac (`0.250.250.254`), the rest of OrbStack's
+  `0.0.0.0/8` except DNS, and private ranges are rejected from inside its own network namespace
+  (`bin/container-firewall.sh`), and nothing on the Mac is touched. A container started outside `sandbox up` (the OrbStack app,
+  `docker start`) has no rules; run `sandbox up` on it.
+- **Container → internet.** The container needs the internet for npm, so malware could
+  phone home or mine crypto. The home network (router, NAS) is blocked by the same firewall
+  (`10/8`, `172.16/12`, `192.168/16`, `100.64/10`, link-local, multicast); a VPN whose
+  addresses are outside those ranges is not. There is nothing to steal inside, the CPU and
+  memory limits cap the damage, and you stop the container when idle.
 - **Browser.** The test app's frontend runs in your browser. The separate profile
   (FIRST-INSTALLATION.md, Task 4) keeps it away from your real sessions.
 - **VM or kernel escape.** Breaking out of the container and the OrbStack VM is possible

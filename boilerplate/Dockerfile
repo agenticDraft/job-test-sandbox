@@ -3,8 +3,10 @@
 # this image is never modified per project.
 FROM node:24-bookworm
 
+# iptables: used only by the sandbox up firewall helper (bin/container-firewall.sh); without
+# NET_ADMIN the work container cannot use it.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends git unzip ca-certificates curl \
+ && apt-get install -y --no-install-recommends git unzip ca-certificates curl iptables \
  && rm -rf /var/lib/apt/lists/*
 
 # Standalone code-server under /usr/local (https://coder.com/docs/code-server/install).

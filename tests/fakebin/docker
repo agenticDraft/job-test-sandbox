@@ -17,6 +17,7 @@ case "$1" in
     if has "$FAKE_DOCKER_STOPPED" "$last"; then echo false; exit 0; fi
     echo "Error: No such container: $last" >&2; exit 1 ;;
 esac
+if [ -n "${FAKE_DOCKER_FAIL_ON:-}" ]; then case "$*" in *"$FAKE_DOCKER_FAIL_ON"*) exit 1 ;; esac; fi
 case " $* " in *" -i "*) cat > "${FAKE_DOCKER_STDIN:-/dev/null}" ;; esac
 case "$*" in *"git bundle"*|*"git archive"*) echo FAKE-OUTPUT ;; esac
 exit "${FAKE_DOCKER_EXIT:-0}"
