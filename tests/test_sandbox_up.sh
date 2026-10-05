@@ -75,6 +75,8 @@ OUT="$("$T/norules/bin/sandbox" up acme </dev/null 2>&1)"; CODE=$?
 assert_eq "rules script missing: exit 1" 1 "$CODE"
 assert_contains "rules script missing: container stopped" "stop jt-acme" "$(log)"
 assert_not_contains "rules script missing: no password" "Password:" "$OUT"
+assert_contains "rules script missing: names the file" "bin/container-firewall.sh" "$OUT"
+assert_not_contains "rules script missing: no build hint" "sandbox build" "$OUT"
 
 export FAKE_DOCKER_EXIT=1
 clear_log

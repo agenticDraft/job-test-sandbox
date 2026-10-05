@@ -196,10 +196,14 @@ firewall_container() {
   local rules
   # An empty sh -c would succeed and load nothing, so a missing script counts as a failure.
   rules="$(cat "$ROOT/bin/container-firewall.sh" 2>/dev/null)" || rules=""
-  if [ -z "$rules" ] || ! docker run --rm --network "container:jt-$1" --user root --cap-drop=ALL \
+  if [ -z "$rules" ]; then
+    docker stop "jt-$1" >/dev/null 2>&1 || true
+    die "could not read bin/container-firewall.sh, so jt-$1 was stopped"
+  fi
+  if ! docker run --rm --network "container:jt-$1" --user root --cap-drop=ALL \
     --cap-add NET_ADMIN --security-opt no-new-privileges "$IMAGE" sh -c "$rules" >/dev/null; then
     docker stop "jt-$1" >/dev/null 2>&1 || true
-    die "could not firewall jt-$1, so it was stopped. If the image predates the firewall, run: sandbox build"
+    die "could not firewall jt-$1, so it was stopped. See the error above; if it says iptables-restore not found, run: sandbox build"
   fi
 }
 
