@@ -314,9 +314,12 @@ firewalls it: a short-lived helper container joins its network namespace with on
 `NET_ADMIN` and loads `bin/container-firewall.sh`, which rejects the Mac (`0.250.250.254` and
 whatever `host.docker.internal` resolves to), the rest of `0.0.0.0/8` where OrbStack keeps its
 own services, `198.18.0.0/15`, and private, link-local and multicast ranges. The internet and
-DNS (the nameservers in the container's `/etc/resolv.conf`, port 53 only) stay open. If the rules cannot be loaded, `sandbox up` stops the
-container and prints no password; an image older than the firewall needs `sandbox build`.
-Nothing on the Mac is listed or stopped (README.md, Residual risks).
+DNS (the nameservers in the container's `/etc/resolv.conf`, port 53 only) stay open over IPv4;
+IPv6 allows only replies, loopback and ICMPv6. `sandbox exec` and `sandbox apply` reload the
+same rules before they run anything, so a container started outside `sandbox up` (the OrbStack
+app, `docker start`) is firewalled too. If the rules cannot be loaded, the command stops the
+container and runs nothing (`up` prints no password); an image older than the firewall needs
+`sandbox build`. Nothing on the Mac is listed or stopped (README.md, Residual risks).
 
 ### Task 2 — Install dependencies without scripts
 

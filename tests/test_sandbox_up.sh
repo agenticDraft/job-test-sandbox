@@ -118,11 +118,16 @@ export FAKE_DOCKER_RUNNING="jt-acme"
 clear_log
 run exec acme npm ci
 assert_contains "exec as dev in the project" "exec --user dev -w /home/dev/project jt-acme npm ci" "$(log)"
+# A container started outside sandbox up has no rules, so exec and apply load them first.
+assert_contains "exec firewalls first" "$fw" "$(log)"
+assert_eq "exec: firewall before the command" "run --|exec -" "$(log | grep -E '^(run --rm --network|exec --user)' | cut -c1-6 | paste -sd'|' -)"
 
 clear_log
 OUT="$(printf 'diff --git a/x b/x\n' | "$ROOT/bin/sandbox" apply acme 2>&1)"; CODE=$?
 assert_eq "apply: exit 0" 0 "$CODE"
 assert_contains "apply runs git apply on stdin" "exec -i --user dev -w /home/dev/project jt-acme git apply --whitespace=nowarn -" "$(log)"
+assert_contains "apply firewalls first" "$fw" "$(log)"
+assert_eq "apply: firewall before the patch" "run --|exec -" "$(log | grep -E '^(run --rm --network|exec -i)' | cut -c1-6 | paste -sd'|' -)"
 assert_contains "apply shows the result" "git diff --stat" "$(log)"
 assert_eq "patch reached the container" "diff --git a/x b/x" "$(cat "$FAKE_DOCKER_STDIN")"
 

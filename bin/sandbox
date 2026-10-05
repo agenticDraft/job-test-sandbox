@@ -200,8 +200,10 @@ firewall_container() {
     docker stop "jt-$1" >/dev/null 2>&1 || true
     die "could not read bin/container-firewall.sh, so jt-$1 was stopped"
   fi
+  # </dev/null: apply runs this before it pipes the patch from stdin into the container.
   if ! docker run --rm --network "container:jt-$1" --user root --cap-drop=ALL \
-    --cap-add NET_ADMIN --security-opt no-new-privileges "$IMAGE" sh -c "$rules" >/dev/null; then
+    --cap-add NET_ADMIN --security-opt no-new-privileges "$IMAGE" sh -c "$rules" \
+    </dev/null >/dev/null; then
     docker stop "jt-$1" >/dev/null 2>&1 || true
     die "could not firewall jt-$1, so it was stopped. See the error above; if it says iptables-restore not found, run: sandbox build"
   fi
@@ -258,6 +260,8 @@ cmd_exec() {
   check_firm "$firm"; shift
   [ $# -gt 0 ] || die "usage: sandbox exec <firm> <command>"
   need_docker; need_running "$firm"
+  # A container started outside sandbox up (OrbStack app, docker start) has no rules yet.
+  firewall_container "$firm"
   local tty=""
   if [ -t 0 ] && [ -t 1 ]; then tty="-it"; fi
   docker exec $tty --user dev -w "$PROJECT" "jt-$firm" "$@"
@@ -274,6 +278,7 @@ cmd_apply() {
     die "give a patch: sandbox apply $firm change.patch (or pipe it in: < change.patch)"
   fi
   need_docker; need_running "$firm"
+  firewall_container "$firm"
   if [ -n "$patch" ]; then
     docker exec -i --user dev -w "$PROJECT" "jt-$firm" git apply --whitespace=nowarn - < "$patch"
   else
