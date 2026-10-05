@@ -101,11 +101,14 @@ containers is untouched. Details: docs/reference.md, Guardrails.
   `host.docker.internal`, including servers bound only to `127.0.0.1` (tested on OrbStack,
   2026-10-03). OrbStack has no setting that blocks this for Docker containers, so every
   `sandbox up` firewalls the work container: the Mac (`0.250.250.254`), the rest of OrbStack's
-  `0.0.0.0/8` except DNS, and private ranges are rejected from inside its own network namespace
-  (`bin/container-firewall.sh`), and nothing on the Mac is touched. `sandbox exec` and
-  `sandbox apply` reload the rules first, so a container started outside `sandbox up` (the
-  OrbStack app, `docker start`) is firewalled before anything runs in it. Code-server and the
-  app inside it run unfirewalled until then; start the container only with `sandbox up`.
+  `0.0.0.0/8` except DNS, `198.18.0.0/15` and private ranges are rejected from inside its own
+  network namespace (`bin/container-firewall.sh`), and nothing on the Mac is touched. A restart
+  drops the rules, and `sandbox up` loads them right after it starts the container, so for that
+  moment only code-server runs unfirewalled (a restart ends anything you started in it, and
+  automatic tasks are off). `sandbox exec` and `sandbox apply` reload the rules first, so a
+  container started outside `sandbox up` (the OrbStack app, `docker start`) is firewalled before
+  anything runs in it. Code-server and the app inside it run unfirewalled until then; start the
+  container only with `sandbox up`.
 - **Container → internet.** The container needs the internet for npm, so malware could
   phone home or mine crypto. The home network (router, NAS) is blocked by the same firewall
   (`10/8`, `172.16/12`, `192.168/16`, `100.64/10`, link-local, multicast); a VPN whose
@@ -113,8 +116,17 @@ containers is untouched. Details: docs/reference.md, Guardrails.
   default network (checked 2026-10-05: only `lo` in `/proc/net/if_inet6`); if it is ever on,
   IPv6 from the container is blocked except ICMPv6. There is nothing to steal inside, the CPU and
   memory limits cap the damage, and you stop the container when idle.
-- **Browser.** The test app's frontend runs in your browser. The separate profile
-  (FIRST-INSTALLATION.md, Task 4) keeps it away from your real sessions.
+- **Delivery token.** Code that ran in the container can write the repo's own `.git/config`
+  (`credential.helper`, `core.askPass`, `url.<base>.insteadOf`) and `.git/hooks`, so a token typed
+  at `git push` inside the container can leak, and the internet is open. Deliver with
+  `sandbox export` (no network, volume read-only) and push the bundle from the Mac. If you must
+  push from the container, read `git config --local --list` and `.git/hooks` first.
+- **Browser.** The test app's frontend runs in your browser, on the Mac, so the container
+  firewall does not apply to it. The separate profile (FIRST-INSTALLATION.md, Task 4) keeps it
+  away from your real sessions, but not from the network: its JavaScript can send requests to
+  servers on the Mac's `127.0.0.1` and the home network. The browser keeps it from reading the
+  replies unless the server allows it (CORS), but a request that changes something still lands.
+  **While the test app is open, do not keep other local dev servers or admin panels running.**
 - **VM or kernel escape.** Breaking out of the container and the OrbStack VM is possible
   in theory and rare in practice. Keep OrbStack updated.
 - **Scan misses.** See docs/reference.md, Phase 2 / Task 4; the container, not the scan, is the boundary.
