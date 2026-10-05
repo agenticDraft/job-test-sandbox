@@ -73,7 +73,7 @@ extensions you allowed in incognito.
 
 **Who:** 🖥 you (`open -t ~/.zshrc`). Claude may not edit files outside this repo. Then open a
 new terminal and check: `cd ~/github/agenticDraft/job-test-sandbox` shows
-`🛡 MAC · job-test-sandbox`, and `sandbox status` answers.
+`🛡 GUARD ON · MAC · job-test-sandbox` on the prompt, and `sandbox status` answers.
 
 Add one line to `~/.zshrc`, **after** oh-my-zsh is loaded:
 
@@ -86,8 +86,9 @@ It defines a `sandbox` function (so the command works from any directory), `guar
 wrapper that switches the guard on before Claude Code starts in this repo, and a `docker`
 wrapper that only looks at `docker run|create` calls naming `jt-` or `job-sandbox`; every
 other `docker` call passes through unchanged. Inside this repo it blocks `git clone`, `unzip`
-and `open` of an archive (override: `command git clone …`), and puts the prompt marker
-`🛡 MAC · job-test-sandbox` on the prompt while you are in this repo. See docs/reference.md, Guardrails / Layer 3.
+and `open` of an archive (override: `command git clone …`), and puts a guard label on the
+prompt while you are in this repo: `🛡 GUARD ON · MAC · job-test-sandbox`, or a red
+`GUARD OFF · MAC · job-test-sandbox` without the shield when the guard is off. See docs/reference.md, Guardrails / Layer 3.
 
 ## Task 6 — Keep Claude from cloning or unpacking, always
 

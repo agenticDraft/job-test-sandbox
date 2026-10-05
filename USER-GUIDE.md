@@ -10,24 +10,71 @@ Each step names where it runs: (Terminal) = Mac terminal, (Claude) = Claude Code
 
 ## Your commands
 
+**We use short aliases; they do not exist on a fresh machine.** `sandbox`, `guard-status`,
+`guard-on`, `guard-off` and `claude` (the one that checks the guard) are our own zsh shell
+functions, used like aliases, not standard tools. They are defined in `shell/sandbox.zsh`. Without
+them (another machine, a plain bash shell) use the full command. Each entry below is: full
+command first, then the short alias.
+
+**To get the aliases** (zsh, one time; FIRST-INSTALLATION.md, Task 5): add this line to
+`~/.zshrc`, after oh-my-zsh if you use it, and open a new terminal:
+
 ```bash
-# 🖥 Mac terminal, any directory (functions from shell/sandbox.zsh).
-# In Claude Code put ! in front, e.g. ! guard-status
-guard-status     # must say "guard is on" before you work on a test
-guard-on         # the normal state; needed only after guard-off
-guard-off        # ONLY to let Claude edit bin/, tests/ or .claude/ -- never with a test open
-claude           # in this repo: switches the guard on, then starts Claude Code
-sandbox status   # every project, its scan verdict and the next step
+source <repo>/shell/sandbox.zsh
 ```
 
-If Claude Code's `!` does not know `guard-on`:
+The file also adds the guard label to the prompt and the `docker`, `git clone`, `unzip` and `open`
+checks inside this repo. If you only want the `sandbox` command and nothing else, a plain alias is
+enough (any shell): `alias sandbox='<repo>/bin/sandbox'`. The `guard-*` aliases are only in
+`shell/sandbox.zsh`; without it use the full commands.
+
+First go into your clone of this repo (replace `<repo>` with its folder, for example
+`~/github/agenticDraft/job-test-sandbox`). The full commands below run from there:
+
+```bash
+cd <repo>
+```
+
+```bash
+# 🖥 Mac terminal, in the repo root. The full commands work in any shell; the short aliases need
+# shell/sandbox.zsh and work from any directory. In Claude Code put ! in front, e.g. ! guard-status
+
+# Guard state: must say GUARD IS ON before you work on a test
+# full (the guard is on exactly when .claude/settings.json exists):
+if [ -f .claude/settings.json ]; then echo "GUARD IS ON"; else echo "GUARD IS OFF"; fi
+guard-status    # short alias
+
+# Guard on: the normal state; needed only after guard-off
+mv .claude/settings.json.off .claude/settings.json && echo "GUARD IS ON"   # full
+guard-on                                                                   # short alias
+
+# Guard off: ONLY to let Claude edit bin/, tests/ or .claude/ -- never with a test open
+mv .claude/settings.json .claude/settings.json.off && echo "GUARD IS OFF"  # full
+guard-off                                                                  # short alias
+
+# Start Claude Code with the guard on (same word, different thing)
+claude    # full: the plain Claude Code CLI; run "guard on" above first if the guard is off
+          # short alias: our zsh function `claude` does that check itself, then starts the CLI
+
+# Every project, its scan verdict and the next step
+bin/sandbox status    # full
+sandbox status        # short alias
+```
+
+Every `sandbox <subcommand>` in this guide is the short alias of `bin/sandbox <subcommand>`
+(full command, from the repo root).
+
+If Claude Code's `!` does not know `guard-on`, use the full command:
 
 ```bash
 ! mv .claude/settings.json.off .claude/settings.json   # guard on
 ! mv .claude/settings.json .claude/settings.json.off   # guard off
 ```
 
-**Where am I?** `🛡 MAC · job-test-sandbox` in the prompt → the Mac: never run test code here.
+**Where am I?** `🛡 GUARD ON · MAC · job-test-sandbox` in the prompt → the Mac, guard on: never run
+test code here. The shield shows only while the guard is on; a red `GUARD OFF · MAC · ...` without
+the shield means it is off: run `guard-on` before you work on a test (the label updates on the
+next prompt).
 `🧪 SANDBOX firma` on orange → the container: test code runs only here.
 
 ## Docker in one minute
@@ -48,7 +95,7 @@ Example: `firma.zip` arrived by email. The project name is yours: lowercase, dig
 
 ```bash
 sandbox status   # "No projects..." or a list = Docker works; "cannot reach the Docker server" = start OrbStack
-guard-status     # must say: guard is on
+guard-status     # must say: GUARD IS ON
 ```
 
 **1. (Browser) Vet the sender** — 🌐 unsolicited recruiter, crypto/web3, "just run our repo", urgency,

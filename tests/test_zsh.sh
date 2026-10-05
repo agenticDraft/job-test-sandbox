@@ -46,12 +46,12 @@ assert_eq "other git commands in the repo work" 0 "$CODE"
 # guard-on / guard-off rename the settings file (a temp copy here, never the real one).
 C="$T/claude"; mkdir -p "$C"; echo '{}' > "$C/settings.json"
 zr "JTS_CLAUDE_DIR='$C'; guard-off; guard-status"
-assert_contains "guard-off switches off" "guard is off" "$OUT"
+assert_contains "guard-off switches off" "GUARD IS OFF" "$OUT"
 assert_eq "guard-off renamed the file" "settings.json.off" "$(ls "$C")"
 zr "JTS_CLAUDE_DIR='$C'; guard-off"
-assert_contains "guard-off twice is harmless" "already off" "$OUT"
+assert_contains "guard-off twice is harmless" "GUARD IS ALREADY OFF" "$OUT"
 zr "JTS_CLAUDE_DIR='$C'; guard-on; guard-status"
-assert_contains "guard-on switches on" "guard is on" "$OUT"
+assert_contains "guard-on switches on" "GUARD IS ON" "$OUT"
 assert_eq "guard-on renamed it back" "settings.json" "$(ls "$C")"
 zr "JTS_CLAUDE_DIR='$T/nothing'; guard-on"
 assert_eq "guard-on without any settings file fails" 1 "$CODE"
@@ -59,10 +59,18 @@ assert_eq "guard-on without any settings file fails" 1 "$CODE"
 zr 'sandbox status --short'
 assert_eq "sandbox function runs bin/sandbox" "🛡 sandbox: none" "$OUT"
 
-zr 'PROMPT="> "; _jts_prompt; print -r -- "$PROMPT"' "$ROOT"
-assert_contains "prompt marked inside the repo" "🛡 MAC · job-test-sandbox" "$OUT"
-zr 'PROMPT="> "; cd "'"$ROOT"'"; _jts_prompt; _jts_prompt; cd /tmp; _jts_prompt; print -r -- "$PROMPT"'
-assert_eq "marker added once and removed outside" "> " "$OUT"
+# The prompt label follows the guard state; the shield shows only while the guard is on.
+zr "JTS_CLAUDE_DIR='$C'; PROMPT='> '; _jts_prompt; print -r -- \"\$PROMPT\"" "$ROOT"
+assert_contains "guard on: prompt says GUARD ON" "GUARD ON · MAC · job-test-sandbox" "$OUT"
+assert_contains "guard on: prompt has the shield" "🛡" "$OUT"
+zr "JTS_CLAUDE_DIR='$C'; guard-off >/dev/null; PROMPT='> '; _jts_prompt; print -r -- \"\$PROMPT\"" "$ROOT"
+assert_contains "guard off: prompt says GUARD OFF" "GUARD OFF · MAC · job-test-sandbox" "$OUT"
+assert_not_contains "guard off: prompt has no shield" "🛡" "$OUT"
+zr "JTS_CLAUDE_DIR='$C'; guard-on >/dev/null; PROMPT='> '; _jts_prompt; guard-off >/dev/null; _jts_prompt; print -r -- \"\$PROMPT\"" "$ROOT"
+assert_not_contains "label swaps when the state changes" "GUARD ON" "$OUT"
+assert_contains "swapped label is the OFF one" "GUARD OFF" "$OUT"
+zr "JTS_CLAUDE_DIR='$C'; guard-on >/dev/null; PROMPT='> '; cd '$ROOT'; _jts_prompt; _jts_prompt; cd /tmp; _jts_prompt; print -r -- \"\$PROMPT\""
+assert_eq "label added once and removed outside" "> " "$OUT"
 
 # Claude Code's `!` and Bash shells replay a snapshot: functions whose names do not start
 # with a single `_`, and no shell variables. The guards must still work there.

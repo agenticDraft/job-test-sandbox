@@ -4,7 +4,9 @@
 # It guards against mistakes, not attacks: `command docker ...` bypasses it on purpose.
 
 typeset -g JTS_ROOT="${${(%):-%x}:A:h:h}"
-typeset -g _JTS_MARK='%F{yellow}🛡 MAC · job-test-sandbox%f '
+# Prompt label inside this repo. The shield appears only while the guard is on.
+typeset -g _JTS_MARK_ON='%F{yellow}🛡 GUARD ON · MAC · job-test-sandbox%f '
+typeset -g _JTS_MARK_OFF='%F{red}GUARD OFF · MAC · job-test-sandbox%f '
 
 # Claude Code's `!` and Bash shells replay a snapshot that keeps functions but drops shell
 # variables and every function named `_x...`. So the guards read the repo path from a
@@ -56,19 +58,19 @@ docker() {
 jts-claude-dir() { print -r -- "${JTS_CLAUDE_DIR:-$(jts-root)/.claude}"; }
 guard-status() {
   local d; d="$(jts-claude-dir)"
-  if [[ -f "$d/settings.json" ]]; then print "🛡 guard is on"
-  elif [[ -f "$d/settings.json.off" ]]; then print "⚠️  guard is off (guard-on to switch it back)"
+  if [[ -f "$d/settings.json" ]]; then print "🛡 GUARD IS ON"
+  elif [[ -f "$d/settings.json.off" ]]; then print "⚠️  GUARD IS OFF (guard-on to switch it back)"
   else print -u2 "🛡 no $d/settings.json or settings.json.off"; return 1; fi
 }
 guard-on() {
   local d; d="$(jts-claude-dir)"
-  if [[ -f "$d/settings.json" ]]; then print "🛡 guard is already on"; return 0; fi
+  if [[ -f "$d/settings.json" ]]; then print "🛡 GUARD IS ALREADY ON"; return 0; fi
   [[ -f "$d/settings.json.off" ]] || { guard-status; return 1; }
   command mv "$d/settings.json.off" "$d/settings.json" && guard-status
 }
 guard-off() {
   local d; d="$(jts-claude-dir)"
-  if [[ -f "$d/settings.json.off" ]]; then print "⚠️  guard is already off"; return 0; fi
+  if [[ -f "$d/settings.json.off" ]]; then print "⚠️  GUARD IS ALREADY OFF"; return 0; fi
   [[ -f "$d/settings.json" ]] || { guard-status; return 1; }
   command mv "$d/settings.json" "$d/settings.json.off" && guard-status &&
     print "   Only for maintenance. Never work on a test project like this. Back on: guard-on"
@@ -120,11 +122,13 @@ open() {
   command open "$@"
 }
 
+# Runs before every prompt: strips the old label, then adds the one for the current guard state.
 _jts_prompt() {
+  PROMPT="${PROMPT#$_JTS_MARK_ON}"
+  PROMPT="${PROMPT#$_JTS_MARK_OFF}"
   if jts-in-repo; then
-    [[ "$PROMPT" == "$_JTS_MARK"* ]] || PROMPT="$_JTS_MARK$PROMPT"
-  else
-    PROMPT="${PROMPT#$_JTS_MARK}"
+    if [[ -f "$(jts-claude-dir)/settings.json" ]]; then PROMPT="$_JTS_MARK_ON$PROMPT"
+    else PROMPT="$_JTS_MARK_OFF$PROMPT"; fi
   fi
 }
 autoload -Uz add-zsh-hook

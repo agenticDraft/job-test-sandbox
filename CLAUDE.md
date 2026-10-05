@@ -1,7 +1,42 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 Sandbox for running untrusted take-home job tests on macOS. `README.md` is the overview; FIRST-INSTALLATION.md and USER-GUIDE.md hold
 the steps; read them before changing anything.
+
+## Tests
+
+- `tests/run.sh` runs every `tests/test_*.sh`; `tests/run.sh tests/test_guard.sh` runs one.
+  Ends with `ALL PASS` or `FAILURES`. No build or lint step exists.
+- Everything is plain shell and must run on macOS `/bin/bash` 3.2 (no associative arrays,
+  no `${var,,}`, no `mapfile`); `bin/container-firewall.sh` is POSIX `sh` (passed to `sh -c`
+  in a `job-sandbox:base` helper container).
+- Tests never touch real Docker: `tests/sandbox_helpers.sh` puts `tests/fakebin/docker` first on
+  `PATH`. The fake logs every call to `$FAKE_DOCKER_LOG` and is steered by `FAKE_DOCKER_*` env vars
+  (volumes, running/stopped containers, failing calls). Assert on the logged docker command lines.
+- `bin/sandbox` reads two test seams: `SANDBOX_WORK_DIR` (instead of `work/`) and
+  `SANDBOX_SETTINGS` (instead of `.claude/settings.json`, i.e. guard on/off). `CLAUDECODE` set
+  means "called by Claude"; the helpers unset it, `test_sandbox_guard_required.sh` sets it.
+- `test_container_firewall.sh` runs the firewall script on the Mac with stub `getent` and
+  `*tables-restore` and compares the full iptables tables it would load.
+
+## Architecture (big picture)
+
+- `bin/sandbox` — the only entry point; one `cmd_<name>` function per subcommand
+  (build/new/scan/up/stop/exec/apply/export/rm/status). Every Docker call goes through it.
+- Code lives only in volume `jt-<firm>`. `scan` uses a throwaway `--network none` container with
+  the volume `:ro` and an allowlist of read commands; `up` starts container `jt-<firm>`
+  (code-server) only when `work/<firm>/scan.md` has exactly one `Verdict:` line that is Green, or
+  Question plus `--accept-question` (`scan_verdict`, `cmd_up`).
+- `up`, `exec` and `apply` call `firewall_container`: a helper container (only `NET_ADMIN`) joins
+  `jt-<firm>`'s network namespace and loads `bin/container-firewall.sh` (blocks the Mac, OrbStack
+  services, private ranges; IPv6 only loopback/ICMPv6). On failure it stops `jt-<firm>`. Rules
+  vanish on restart, hence the rerun every time. Rationale: README.md, Residual risks.
+- Guard layers, independent of each other: `.claude/hooks/guard.sh` (Claude tool allowlist, on
+  via `.claude/settings.json`), `.claude/hooks/no-intake.sh` (always on, via
+  `settings.local.json`), `shell/sandbox.zsh` (Mac-side zsh wrappers, mistakes not attacks),
+  container defaults in `boilerplate/`. Full description: docs/reference.md, Guardrails.
 
 ## Status (2026-10-02)
 
@@ -18,6 +53,9 @@ the steps; read them before changing anything.
 
 ## Rules for Claude
 
+- **Whenever you change `README.md`, update `.claude/artifacts/job-test-sandbox.html` in the
+  same task** (the matching section, same wording) and republish it to the runbook URL above.
+  The page mirrors the README; a README edit without it leaves the published page stale.
 - **Never start or `cd` into a test repo, and never run anything from one.** Test code
   lives only in Docker volumes `jt-<firm>`.
 - Read test code **only** with `bin/sandbox scan <firm> <read command>` (no network, volume
