@@ -3,6 +3,8 @@
 Run take-home tests (small React apps and similar) from unknown companies without letting
 their code touch the Mac.
 
+Public repo: https://github.com/agenticDraft/job-test-sandbox
+
 ## Terminal or Claude?
 
 **You never type `docker`.** Every Docker call goes through one script, `bin/sandbox` (short
