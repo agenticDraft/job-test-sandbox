@@ -107,7 +107,9 @@ containers is untouched. Details: docs/reference.md, Guardrails.
 - **Container → internet.** The container needs the internet for npm, so malware could
   phone home or mine crypto. The home network (router, NAS) is blocked by the same firewall
   (`10/8`, `172.16/12`, `192.168/16`, `100.64/10`, link-local, multicast); a VPN whose
-  addresses are outside those ranges is not. There is nothing to steal inside, the CPU and
+  addresses are outside those ranges is not. IPv6 is off in the container on OrbStack's
+  default network (checked 2026-10-05: only `lo` in `/proc/net/if_inet6`); if it is ever on,
+  global IPv6 addresses are not blocked. There is nothing to steal inside, the CPU and
   memory limits cap the damage, and you stop the container when idle.
 - **Browser.** The test app's frontend runs in your browser. The separate profile
   (FIRST-INSTALLATION.md, Task 4) keeps it away from your real sessions.
