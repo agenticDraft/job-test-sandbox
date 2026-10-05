@@ -35,7 +35,7 @@ assert_eq "OrbStack: IPv4 table" "*filter
 :INPUT ACCEPT [0:0]
 :FORWARD ACCEPT [0:0]
 :OUTPUT ACCEPT [0:0]
--A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+-A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED --ctdir REPLY -j ACCEPT
 -A OUTPUT -d 0.250.250.200 -p udp --dport 53 -j ACCEPT
 -A OUTPUT -d 0.250.250.200 -p tcp --dport 53 -j ACCEPT
 -A OUTPUT -d 0.250.250.254 -j REJECT
@@ -52,11 +52,10 @@ assert_eq "OrbStack: IPv6 table" "*filter
 :INPUT ACCEPT [0:0]
 :FORWARD ACCEPT [0:0]
 :OUTPUT ACCEPT [0:0]
--A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+-A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED --ctdir REPLY -j ACCEPT
+-A OUTPUT -o lo -j ACCEPT
 -A OUTPUT -p ipv6-icmp -j ACCEPT
--A OUTPUT -d fc00::/7 -j REJECT
--A OUTPUT -d fe80::/10 -j REJECT
--A OUTPUT -d ff00::/8 -j REJECT
+-A OUTPUT -j REJECT
 COMMIT" "$(cat "$T/v6")"
 
 export FAKE_GETENT_V4="" FAKE_GETENT_V6=""
@@ -69,7 +68,7 @@ export FAKE_GETENT_V4="0.250.250.253" FAKE_GETENT_V6="fd07:b51a::254"
 fw
 assert_contains "other host address rejected" "-A OUTPUT -d 0.250.250.253 -j REJECT" "$(cat "$T/v4")"
 assert_contains "OrbStack address kept as well" "-A OUTPUT -d 0.250.250.254 -j REJECT" "$(cat "$T/v4")"
-assert_contains "IPv6 host address rejected" "-A OUTPUT -d fd07:b51a::254 -j REJECT" "$(cat "$T/v6")"
+assert_not_contains "IPv6 table ignores host names" "fd07:b51a::254" "$(cat "$T/v6")"
 assert_eq "each address once" 1 "$(grep -c '0.250.250.254' "$T/v4")"
 
 export RESOLV_CONF="$T/missing.conf" FAKE_GETENT_V4="0.250.250.254" FAKE_GETENT_V6=""

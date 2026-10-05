@@ -75,6 +75,8 @@ OUT="$("$T/norules/bin/sandbox" up acme </dev/null 2>&1)"; CODE=$?
 assert_eq "rules script missing: exit 1" 1 "$CODE"
 assert_contains "rules script missing: container stopped" "stop jt-acme" "$(log)"
 assert_not_contains "rules script missing: no password" "Password:" "$OUT"
+assert_contains "rules script missing: names the file" "bin/container-firewall.sh" "$OUT"
+assert_not_contains "rules script missing: no build hint" "sandbox build" "$OUT"
 
 export FAKE_DOCKER_EXIT=1
 clear_log
@@ -90,12 +92,26 @@ run up acme
 assert_contains "stopped container is restarted" "start jt-acme" "$(log)"
 assert_not_contains "stopped container is not recreated" "run -d" "$(log)"
 assert_contains "restarted container: firewalled" "$fw" "$(log)"
+export FAKE_DOCKER_FAIL_ON="--network container:"
+clear_log
+run up acme
+assert_eq "restarted, firewall fails: exit 1" 1 "$CODE"
+assert_contains "restarted, firewall fails: container stopped" "stop jt-acme" "$(log)"
+assert_not_contains "restarted, firewall fails: no password" "Password:" "$OUT"
+export FAKE_DOCKER_FAIL_ON=""
 
 export FAKE_DOCKER_STOPPED="" FAKE_DOCKER_RUNNING="jt-acme"
 clear_log
 run up acme
 assert_contains "running container reported" "already running" "$OUT"
 assert_contains "running container: firewalled again" "$fw" "$(log)"
+export FAKE_DOCKER_FAIL_ON="--network container:"
+clear_log
+run up acme
+assert_eq "running, firewall fails: exit 1" 1 "$CODE"
+assert_contains "running, firewall fails: container stopped" "stop jt-acme" "$(log)"
+assert_not_contains "running, firewall fails: no password" "Password:" "$OUT"
+export FAKE_DOCKER_FAIL_ON=""
 
 clear_log
 run stop acme
@@ -116,11 +132,23 @@ export FAKE_DOCKER_RUNNING="jt-acme"
 clear_log
 run exec acme npm ci
 assert_contains "exec as dev in the project" "exec --user dev -w /home/dev/project jt-acme npm ci" "$(log)"
+# A container started outside sandbox up has no rules, so exec and apply load them first.
+assert_contains "exec firewalls first" "$fw" "$(log)"
+assert_eq "exec: firewall before the command" "run --|exec -" "$(log | grep -E '^(run --rm --network|exec --user)' | cut -c1-6 | paste -sd'|' -)"
+export FAKE_DOCKER_FAIL_ON="--network container:"
+clear_log
+run exec acme npm ci
+assert_eq "exec, firewall fails: exit 1" 1 "$CODE"
+assert_contains "exec, firewall fails: container stopped" "stop jt-acme" "$(log)"
+assert_not_contains "exec, firewall fails: command not run" "jt-acme npm ci" "$(log)"
+export FAKE_DOCKER_FAIL_ON=""
 
 clear_log
 OUT="$(printf 'diff --git a/x b/x\n' | "$ROOT/bin/sandbox" apply acme 2>&1)"; CODE=$?
 assert_eq "apply: exit 0" 0 "$CODE"
 assert_contains "apply runs git apply on stdin" "exec -i --user dev -w /home/dev/project jt-acme git apply --whitespace=nowarn -" "$(log)"
+assert_contains "apply firewalls first" "$fw" "$(log)"
+assert_eq "apply: firewall before the patch" "run --|exec -" "$(log | grep -E '^(run --rm --network|exec -i)' | cut -c1-6 | paste -sd'|' -)"
 assert_contains "apply shows the result" "git diff --stat" "$(log)"
 assert_eq "patch reached the container" "diff --git a/x b/x" "$(cat "$FAKE_DOCKER_STDIN")"
 

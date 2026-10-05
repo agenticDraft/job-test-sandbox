@@ -158,10 +158,16 @@ docker port jt-acme                                     # expect: 127.0.0.1:8443
 docker exec jt-acme grep CapEff /proc/self/status       # expect: 0000000000000000
 
 # 6. Work container cannot reach the Mac or the LAN; npm and code-server still work
+#    One command per line, no loop: zsh url-quote-magic breaks a pasted one-line loop.
 LAN="$(ipconfig getifaddr en0)"
-for u in host.docker.internal:18765 host.docker.internal:18766 0.250.250.1:18765 "$LAN:18766"; do
-  docker exec jt-acme curl -sS -m 4 -o /dev/null -w "$u %{http_code}\n" "http://$u/"
-done                                                    # expect: each 000, none 200
+docker exec jt-acme curl -sS -m 4 -o /dev/null -w "mac-127  %{http_code}\n" http://host.docker.internal:18765/
+docker exec jt-acme curl -sS -m 4 -o /dev/null -w "mac-all  %{http_code}\n" http://host.docker.internal:18766/
+docker exec jt-acme curl -sS -m 4 -o /dev/null -w "orb-.1   %{http_code}\n" http://0.250.250.1:18765/
+docker exec jt-acme curl -sS -m 4 -o /dev/null -w "mac-lan  %{http_code}\n" "http://$LAN:18766/"
+                                                        # expect: each 000, none 200
+curl -sS -o /dev/null -w "control-127  %{http_code}\n" http://127.0.0.1:18765/
+curl -sS -o /dev/null -w "control-all  %{http_code}\n" http://127.0.0.1:18766/
+                                                        # expect: 200 (both test servers are up)
 docker exec jt-acme curl -sS -o /dev/null -w "%{http_code}\n" https://registry.npmjs.org/
                                                         # expect: 200
 curl -sS -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8443/
