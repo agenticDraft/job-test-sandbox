@@ -33,7 +33,9 @@ table() {
   echo ':INPUT ACCEPT [0:0]'
   echo ':FORWARD ACCEPT [0:0]'
   echo ':OUTPUT ACCEPT [0:0]'
-  echo '-A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT'
+  # Only replies (--ctdir REPLY): a connection the container opened before the rules loaded
+  # must not survive them.
+  echo '-A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED --ctdir REPLY -j ACCEPT'
   if [ -n "$extra" ]; then echo "$extra"; fi
   for t in "$@"; do echo "-A OUTPUT -d $t -j REJECT"; done
   echo 'COMMIT'
