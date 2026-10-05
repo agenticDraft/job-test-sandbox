@@ -2,8 +2,8 @@
 # Replaces the filter tables of the work container's network namespace: replies and DNS pass; the
 # Mac (OrbStack host 0.250.250.254 and whatever host.docker.internal / host.orb.internal resolve
 # to), the rest of 0.0.0.0/8 (OrbStack's undocumented services), 198.18.0.0/15 and private,
-# link-local and multicast ranges are rejected; the internet is allowed. Why: README.md, Residual
-# risks. RESOLV_CONF is only set by tests.
+# link-local and multicast ranges are rejected; the internet is allowed over IPv4. IPv6 allows only
+# replies, loopback and ICMPv6. Why: README.md, Residual risks. RESOLV_CONF is only set by tests.
 set -eu
 NAMES="host.docker.internal host.orb.internal"
 
@@ -25,7 +25,7 @@ resolve() {
   } | sort -u
 }
 
-# table <extra accept rules, one per line, or ""> <target>...: a full filter table, so loading it
+# table <extra rules, one per line, or ""> <target>...: a full filter table, so loading it
 # replaces the old one and a rerun never stacks rules.
 table() {
   extra="$1"; shift
@@ -42,9 +42,11 @@ table() {
 }
 
 mac4="$(resolve ahostsv4 0.250.250.254)"
-mac6="$(resolve ahostsv6)"
-# Word splitting of the address lists is intended.
+# Word splitting of the address list is intended.
 table "$dns_accept" $mac4 0.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 \
   169.254.0.0/16 198.18.0.0/15 224.0.0.0/4 | iptables-restore
-# ICMPv6 stays open: neighbour discovery needs it, and the ff00::/8 reject would block it.
-table "-A OUTPUT -p ipv6-icmp -j ACCEPT" $mac6 fc00::/7 fe80::/10 ff00::/8 | ip6tables-restore
+# IPv6 is an allow-list: npm uses IPv4, so every other IPv6 destination (the Mac's or a home
+# device's global address included) is rejected. ICMPv6 stays open for neighbour discovery.
+table "-A OUTPUT -o lo -j ACCEPT
+-A OUTPUT -p ipv6-icmp -j ACCEPT
+-A OUTPUT -j REJECT" | ip6tables-restore

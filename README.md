@@ -109,7 +109,7 @@ containers is untouched. Details: docs/reference.md, Guardrails.
   (`10/8`, `172.16/12`, `192.168/16`, `100.64/10`, link-local, multicast); a VPN whose
   addresses are outside those ranges is not. IPv6 is off in the container on OrbStack's
   default network (checked 2026-10-05: only `lo` in `/proc/net/if_inet6`); if it is ever on,
-  global IPv6 addresses are not blocked. There is nothing to steal inside, the CPU and
+  IPv6 from the container is blocked except ICMPv6. There is nothing to steal inside, the CPU and
   memory limits cap the damage, and you stop the container when idle.
 - **Browser.** The test app's frontend runs in your browser. The separate profile
   (FIRST-INSTALLATION.md, Task 4) keeps it away from your real sessions.
