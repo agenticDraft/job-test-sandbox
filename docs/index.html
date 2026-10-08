@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job Test Sandbox</title>
+<meta name="description" content="Run take-home job tests from unknown companies without letting their code touch the Mac.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: agenticdraft.dev's world, kept to one dark look on purpose: navy ground, spectrum
+   accents, square edges, one daylight band for the rules. Tokens copied from the site's global.css. */
+:root {
+  color-scheme: dark;
+  --ink: #f7f8fb;
+  --muted: #9ba7bd;
+  --dim: #8391a8;
+  --navy: #071020;
+  --navy-2: #0a1427;
+  --navy-3: #081225;
+  --footer: #050c18;
+  --line: rgba(156, 182, 226, .16);
+  --line-strong: rgba(156, 182, 226, .26);
+  --cyan: #55e8ff;
+  --blue: #558cff;
+  --violet: #a96eff;
+  --daylight: #f1f4f8;
+  --daylight-ink: #0d1728;
+  --daylight-muted: #536177;
+  --daylight-line: #cbd2dd;
+  --spectrum: linear-gradient(110deg, var(--cyan), #75a0ff 58%, #c588ff);
+  --sans: "Manrope", Arial, sans-serif;
+  --mono: "DM Mono", ui-monospace, Menlo, monospace;
+  --space-page: clamp(1.25rem, 5vw, 4.5rem);
+  --space-section: clamp(4rem, 8vw, 7rem);
+  --measure: 62ch;
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  /* Inline code, redefined inside the daylight band. */
+  --code-fg: #cdd6e4;
+  --code-bg: rgba(156, 182, 226, .1);
+  --code-line: rgba(156, 182, 226, .18);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--navy); color: var(--ink); font: 400 17px/1.65 var(--sans); }
+main, section, div, nav, ul, ol, li, p, h1, h2, h3 { min-width: 0; }
+p, h1, h2, h3, a, span, li { overflow-wrap: break-word; }
+a { color: inherit; }
+::selection { background: var(--cyan); color: var(--navy); }
+:focus-visible { outline: 3px solid var(--cyan); outline-offset: 4px; }
+h1, h2, h3, p { margin-top: 0; }
+h1, h2, h3 { text-wrap: balance; }
+section[id] { scroll-margin-top: 90px; }
+
+code { font: .86em/1.4 var(--mono); color: var(--code-fg); background: var(--code-bg);
+  border: 1px solid var(--code-line); padding: .05em .35em; }
+strong { font-weight: 700; }
+
+/* Header */
+.site-header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; display: flex; align-items: center;
+  justify-content: space-between; gap: 1rem 2rem; flex-wrap: wrap; padding: 1.1rem var(--space-page);
+  background: rgba(7, 16, 32, .9); backdrop-filter: blur(18px); border-bottom: 1px solid var(--line); }
+.brand { display: inline-flex; align-items: center; gap: .7rem; font-weight: 700; font-size: 1.15rem;
+  letter-spacing: -.035em; text-decoration: none; }
+.brand-mark { width: 14px; height: 14px; background: var(--spectrum); transform: rotate(45deg); }
+.site-nav { display: flex; gap: 1.6rem; font-size: .98rem; overflow-x: auto; scrollbar-width: none; }
+.site-nav a { color: var(--muted); text-decoration: none; white-space: nowrap; transition: color .2s; }
+.site-nav a:hover { color: var(--ink); }
+
+/* Hero */
+.hero { position: relative; padding: clamp(3.5rem, 8vw, 6.5rem) var(--space-page) 0; isolation: isolate;
+  border-bottom: 1px solid rgba(156, 182, 226, .28); overflow: hidden; }
+.hero::before { content: ""; position: absolute; inset: 0; z-index: -2;
+  background: linear-gradient(180deg, rgba(85, 140, 255, .045), transparent 42%); }
+.hero-glow { position: absolute; z-index: -1; width: 50vw; max-width: 100%; aspect-ratio: 1; left: -20vw; top: 2rem;
+  border-radius: 50%; background: radial-gradient(circle, rgba(55, 135, 255, .16), transparent 65%); filter: blur(16px); }
+.eyebrow { display: flex; align-items: center; gap: .8rem; margin: 0 0 1.2rem; font: 500 .8rem/1.45 var(--mono);
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ink); }
+.eyebrow::before { content: ""; flex: none; width: 36px; height: 2px; background: var(--spectrum); }
+h1 { margin-bottom: 1.4rem; font-size: clamp(2.9rem, 7vw, 5.4rem); line-height: 1; letter-spacing: -.045em; font-weight: 600; }
+h1 em, h2 em { font-style: normal; color: var(--cyan); }
+.lede { max-width: var(--measure); color: var(--muted); font-size: clamp(1.15rem, 1.6vw, 1.4rem); line-height: 1.6;
+  letter-spacing: -.012em; margin-bottom: clamp(2.5rem, 5vw, 3.5rem); }
+.proof { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: .6rem 2rem; align-items: baseline;
+  margin-inline: calc(var(--space-page) * -1); padding: 1.35rem var(--space-page);
+  border-top: 1px solid rgba(156, 182, 226, .25); background: var(--navy-2); }
+.proof-label { margin: 0; color: var(--muted); font: .78rem/1.5 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.proof-label b { display: inline-block; margin-left: .5rem; padding: .25rem .5rem; color: var(--navy); background: var(--cyan);
+  font-weight: 500; letter-spacing: .08em; }
+.proof p:last-child { margin: 0; max-width: 78ch; color: var(--muted); font-size: .98rem; line-height: 1.6; }
+
+/* Sections */
+.section { padding: var(--space-section) var(--space-page); border-top: 1px solid var(--line); }
+.section.alt { background: var(--navy-3); }
+.section-head { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); column-gap: clamp(2rem, 6vw, 6rem);
+  margin-bottom: clamp(2.2rem, 4vw, 3.5rem); }
+.section-head .eyebrow { grid-column: 1 / -1; }
+h2 { margin-bottom: 0; font-size: clamp(2.2rem, 4.2vw, 3.8rem); line-height: 1; letter-spacing: -.04em; font-weight: 600; }
+.section-head > p:last-child { align-self: end; max-width: 46ch; margin: 0; color: var(--muted); font-size: 1.1rem; line-height: 1.65; }
+.prose { max-width: var(--measure); }
+.prose p { color: var(--muted); }
+.prose p strong { color: var(--ink); }
+
+/* Rows: documents, architecture parts, guardrails */
+.rows { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.row { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 1.1rem; padding: 1.5rem .5rem;
+  border-bottom: 1px solid rgba(156, 182, 226, .2); transition: background .25s var(--ease-out); }
+.row:hover { background: linear-gradient(90deg, rgba(85, 232, 255, .07), rgba(169, 110, 255, .04)); }
+.row::before { content: ""; width: 12px; height: 12px; margin: .45rem 0 0 4px; border: 1.5px solid rgba(156, 182, 226, .6);
+  background: var(--navy); transform: rotate(45deg); }
+.row.key::before { border-color: var(--ink); background: var(--ink); }
+.row h3 { margin: 0 0 .35rem; font-size: 1.22rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.3; }
+.row p { margin: 0; max-width: 70ch; color: var(--muted); font-size: 1rem; line-height: 1.62; }
+.row p + p { margin-top: .5rem; }
+.cmd { display: inline-block; color: var(--cyan); font: .86rem/1.3 var(--mono); background: rgba(85, 232, 255, .07);
+  border: 1px solid rgba(85, 232, 255, .18); padding: .35rem .55rem; text-decoration: none; }
+a.cmd:hover { background: rgba(85, 232, 255, .14); }
+.row h3 .cmd { font-size: .95rem; }
+
+/* Diagram frame, after the site's .flow box */
+.flow { margin: clamp(2rem, 4vw, 3rem) 0; padding: clamp(1.2rem, 3vw, 2.4rem); border: 1px solid rgba(156, 182, 226, .22);
+  background: radial-gradient(circle at 0 0, rgba(55, 135, 255, .13), transparent 42%), var(--navy); overflow-x: auto; }
+.flow-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 2rem; margin-bottom: 1.5rem; }
+.flow-top p { margin: 0; color: var(--dim); font: .74rem/1.5 var(--mono); letter-spacing: .16em; text-transform: uppercase; }
+.flow .mermaid svg { max-width: 100%; height: auto; }
+.flow .node rect, .flow .node path, .flow .node polygon, .flow .node circle { fill: var(--navy-2) !important; stroke: rgba(156, 182, 226, .55) !important; stroke-width: 1.5px !important; }
+.flow .cluster rect { fill: rgba(156, 182, 226, .04) !important; stroke: rgba(156, 182, 226, .3) !important; stroke-dasharray: 4 4; }
+.flow .nodeLabel, .flow .node .label, .flow .cluster-label, .flow .cluster-label * { color: var(--ink) !important; fill: var(--ink) !important; }
+.flow .flowchart-link, .flow .edgePath .path { stroke: #75a0ff !important; }
+.flow .marker, .flow marker path { fill: #75a0ff !important; stroke: #75a0ff !important; }
+.flow .edgeLabel, .flow .edgeLabel p, .flow .edgeLabel span, .flow .labelBkg { color: var(--cyan) !important; background: var(--navy) !important; background-color: var(--navy) !important; }
+.flow .edgeLabel rect { fill: var(--navy) !important; }
+.flow-claim { margin: 1.6rem 0 0; padding-top: 1.4rem; border-top: 1px solid rgba(156, 182, 226, .22);
+  font-size: clamp(1.05rem, 1.6vw, 1.3rem); font-weight: 600; line-height: 1.35; letter-spacing: -.02em; }
+
+/* Daylight band: the rules */
+.daylight { --code-fg: #0d1728; --code-bg: #e2e8f0; --code-line: #cbd2dd;
+  background: var(--daylight); color: var(--daylight-ink); border-top: 1px solid rgba(85, 140, 255, .4); }
+.daylight .eyebrow { color: #56657d; }
+.daylight .section-head > p:last-child { color: var(--daylight-muted); }
+.rules { counter-reset: rule; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  gap: clamp(2rem, 3.5vw, 3.5rem) clamp(2rem, 4vw, 4rem); margin: 0; padding: 0; list-style: none; }
+.rule { counter-increment: rule; }
+.rule::before { content: counter(rule, decimal-leading-zero); display: block; color: #66748a; font: .85rem var(--mono); }
+.rule-line { position: relative; height: 1px; margin: .9rem 0 1.4rem; background: var(--daylight-line); }
+.rule-line::after { content: ""; position: absolute; left: 0; top: -2px; width: 100%; height: 4px;
+  background: linear-gradient(90deg, #2fd7ed, #8d61ec); transform: scaleX(.42); transform-origin: left; transition: transform .45s ease; }
+.rule:hover .rule-line::after { transform: scaleX(1); }
+.rule h3 { margin-bottom: .55rem; font-size: 1.3rem; font-weight: 700; letter-spacing: -.025em; line-height: 1.25; }
+.rule p { margin: 0; max-width: 38ch; color: var(--daylight-muted); font-size: 1.02rem; line-height: 1.6; }
+
+/* Residual risks, after the site's story chapters */
+.chapters { margin: 0; padding: 0; list-style: none; }
+.chapter { display: grid; grid-template-columns: minmax(170px, .3fr) minmax(0, 1fr); gap: clamp(1rem, 4vw, 4rem);
+  padding: clamp(1.8rem, 3vw, 2.6rem) 0; border-top: 1px solid var(--line); }
+.chapter:first-child { border-top: 0; padding-top: 0; }
+.chapter-marker { margin: .3rem 0 0; color: var(--muted); font: .8rem/1.5 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.chapter p:last-child { margin: 0; max-width: var(--measure); color: var(--muted); font-size: 1.06rem; line-height: 1.7; }
+.chapter p strong { color: var(--ink); }
+
+/* Footer */
+.site-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 2rem;
+  padding: 2.2rem var(--space-page); color: var(--muted); background: var(--footer); border-top: 1px solid var(--line-strong);
+  font-size: .95rem; }
+.site-footer p { margin: 0; }
+.site-footer a { color: var(--ink); text-decoration: none; border-bottom: 1px solid rgba(247, 248, 251, .35); }
+
+@media (max-width: 860px) {
+  .section-head { grid-template-columns: minmax(0, 1fr); }
+  .section-head > p:last-child { margin-top: 1.4rem; }
+  .proof { grid-template-columns: minmax(0, 1fr); }
+  .chapter { grid-template-columns: minmax(0, 1fr); gap: .7rem; }
+}
+@media (max-width: 640px) {
+  .site-header { flex-direction: column; align-items: flex-start; gap: .7rem; }
+  .site-nav { width: 100%; gap: 1.2rem; font-size: .92rem; }
+  .row { padding-inline: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .row, .rule-line::after, .site-nav a { transition-duration: 0s; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span>Job Test Sandbox</a>
+  <nav class="site-nav" aria-label="Contents">
+    <a href="#who">Terminal or Claude?</a>
+    <a href="#claude">Claude and Docker</a>
+    <a href="#docs">Documents</a>
+    <a href="#why">Why</a>
+    <a href="#arch">Architecture</a>
+    <a href="#rules">Rules</a>
+    <a href="#guard">Guardrails</a>
+    <a href="#risks">Residual risks</a>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <p class="eyebrow">Overview · OrbStack + Docker + code-server</p>
+    <h1>Job Test <em>Sandbox</em></h1>
+    <p class="lede">Run take-home tests (small React apps and similar) from unknown companies without letting their code touch the Mac.</p>
+    <p class="lede">Public repo: <a href="https://github.com/agenticDraft/job-test-sandbox" target="_blank" rel="noopener">https://github.com/agenticDraft/job-test-sandbox</a></p>
+    <div class="proof">
+      <p class="proof-label">Status<b>Checked</b></p>
+      <p><code>bin/sandbox</code>, the Claude guard hook, the statusline, the Mac zsh guard and <code>boilerplate/Dockerfile</code> are tested against a fake <code>docker</code> and checked on real Docker (OrbStack): the verification in FIRST-INSTALLATION.md (Task 7) and the checks in <code>docs/superpowers/plans/2026-10-01-sandbox-ux.md</code> (Phase 6) passed, except <code>npm rebuild</code> (needs a project with esbuild).</p>
+    </div>
+  </section>
+
+  <section class="section" id="who">
+    <div class="section-head">
+      <p class="eyebrow">Terminal or Claude?</p>
+      <h2>You never type <em>docker</em></h2>
+      <p>Every Docker call goes through one script, <code>bin/sandbox</code> (alias <code>sandbox</code>). A plain Mac terminal and Claude Code run the same script and the same Docker. What differs is who you trust with the step.</p>
+    </div>
+    <ul class="rows">
+      <li class="row key"><div><h3>Plain Mac terminal — you</h3><p>Everything that needs a secret or a file Claude must not see, plus the daily start and stop: <code>sandbox new &lt;firm&gt; ~/Downloads/&lt;firm&gt;.zip</code> (the guard keeps Claude out of Downloads), <code>sandbox new</code> with a private repo URL (asks you for a read-only token), <code>sandbox up</code>, <code>stop</code>, <code>status</code>, sending <code>out/&lt;firm&gt;.zip</code> to the company, <code>guard-on</code> / <code>guard-off</code>, deleting <code>work/</code>.</p></div></li>
+      <li class="row key"><div><h3>Claude Code in this repo — work on the test project</h3><p>Say what you want and Claude runs <code>sandbox</code> for you. <code>scan &lt;firm&gt;</code> reads the code with no network and the volume read-only and writes <code>work/&lt;firm&gt;/scan.md</code>. "Run the tests in &lt;firm&gt;" and "fix the failing test in &lt;firm&gt;" use <code>exec</code> and <code>apply</code> (a patch; you see the diff).</p><p>Also <code>new</code> (public repo only), <code>up</code>, <code>export</code>, <code>stop</code>. <code>rm</code> and starting a <code>Question</code> verdict ask you first.</p></div></li>
+      <li class="row key"><div><h3>code-server terminal in the browser — you</h3><p><code>npm ci</code>, <code>npm run dev</code>. The only place the test's code runs, inside the container.</p></div></li>
+    </ul>
+    <p class="prose" style="margin-top:1.6rem"><strong>Two things hold in all three.</strong> The test's code never runs on the Mac. And Claude starts in this repo, never inside a test folder, with the guard on (<code>guard-status</code> must say <code>GUARD IS ON</code>). The prompt tells you where you are: <code>🛡 GUARD ON · MAC · job-test-sandbox</code> is the Mac, <code>🧪 SANDBOX &lt;firm&gt;</code> on orange is the container. Step by step: USER-GUIDE.md.</p>
+  </section>
+
+  <section class="section alt" id="claude">
+    <div class="section-head">
+      <p class="eyebrow">How Claude works with the container</p>
+      <h2>Claude stays on the <em>Mac</em></h2>
+      <p>No Claude CLI and no token go into the container. Claude sees only the text <code>sandbox</code> prints, and changes code only by handing it a patch.</p>
+    </div>
+    <div class="flow">
+      <div class="flow-top"><p>Who calls what</p><p>Mac → OrbStack VM</p></div>
+      <svg viewBox="0 0 900 400" role="img" aria-label="Claude Code on the Mac passes each tool call through the guard hook, then runs bin/sandbox, which calls docker to reach a throwaway scan container or the work container inside the OrbStack VM. Only text and zip files come back to work/ on the Mac." style="width:100%;height:auto;font-family:var(--mono);font-size:13px">
+        <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#75a0ff"/></marker></defs>
+        <rect x="10" y="10" width="330" height="380" fill="none" stroke="rgba(156,182,226,.3)" stroke-dasharray="4 4"/>
+        <text x="24" y="34" fill="#9fb0cc">MAC</text>
+        <rect x="560" y="10" width="330" height="380" fill="none" stroke="rgba(156,182,226,.3)" stroke-dasharray="4 4"/>
+        <text x="574" y="34" fill="#9fb0cc">ORBSTACK LINUX VM</text>
+
+        <rect x="40" y="55" width="270" height="52" fill="#0c1a33" stroke="rgba(156,182,226,.55)" stroke-width="1.5"/>
+        <text x="175" y="78" text-anchor="middle" fill="#f7f8fb">Claude Code</text>
+        <text x="175" y="96" text-anchor="middle" fill="#9fb0cc">started in this repo</text>
+
+        <rect x="40" y="140" width="270" height="52" fill="#0c1a33" stroke="rgba(156,182,226,.55)" stroke-width="1.5"/>
+        <text x="175" y="163" text-anchor="middle" fill="#f7f8fb">guard hook</text>
+        <text x="175" y="181" text-anchor="middle" fill="#9fb0cc">not on the allowlist → refused</text>
+
+        <rect x="40" y="225" width="270" height="52" fill="#0c1a33" stroke="#85e8ff" stroke-width="1.5"/>
+        <text x="175" y="248" text-anchor="middle" fill="#85e8ff">bin/sandbox &lt;command&gt;</text>
+        <text x="175" y="266" text-anchor="middle" fill="#9fb0cc">every Docker call goes here</text>
+
+        <rect x="40" y="320" width="270" height="52" fill="#0c1a33" stroke="rgba(156,182,226,.55)" stroke-width="1.5"/>
+        <text x="175" y="343" text-anchor="middle" fill="#f7f8fb">work/&lt;firm&gt;/scan.md, out/</text>
+        <text x="175" y="361" text-anchor="middle" fill="#9fb0cc">text and zips only</text>
+
+        <path d="M175 107V138" stroke="#75a0ff" stroke-width="1.5" marker-end="url(#ah)"/>
+        <path d="M175 192V223" stroke="#75a0ff" stroke-width="1.5" marker-end="url(#ah)"/>
+        <path d="M175 277V318" stroke="#75a0ff" stroke-width="1.5" marker-end="url(#ah)"/>
+
+        <rect x="590" y="55" width="270" height="62" fill="#0c1a33" stroke="rgba(156,182,226,.55)" stroke-width="1.5"/>
+        <text x="725" y="78" text-anchor="middle" fill="#f7f8fb">scan: throwaway container</text>
+        <text x="725" y="96" text-anchor="middle" fill="#9fb0cc">no network · volume :ro</text>
+        <text x="725" y="111" text-anchor="middle" fill="#9fb0cc">removed after each command</text>
+
+        <rect x="590" y="155" width="270" height="62" fill="#0c1a33" stroke="rgba(156,182,226,.55)" stroke-width="1.5"/>
+        <text x="725" y="178" text-anchor="middle" fill="#f7f8fb">exec · apply: container jt-&lt;firm&gt;</text>
+        <text x="725" y="196" text-anchor="middle" fill="#9fb0cc">user dev · firewall reloaded first</text>
+        <text x="725" y="211" text-anchor="middle" fill="#9fb0cc">exec runs it · apply = git apply</text>
+
+        <rect x="590" y="255" width="270" height="52" fill="#0c1a33" stroke="rgba(156,182,226,.55)" stroke-width="1.5"/>
+        <text x="725" y="278" text-anchor="middle" fill="#f7f8fb">export: bundle + zip</text>
+        <text x="725" y="296" text-anchor="middle" fill="#9fb0cc">made from the volume</text>
+
+        <rect x="590" y="335" width="270" height="40" fill="#0c1a33" stroke="#85e8ff" stroke-width="1.5"/>
+        <text x="725" y="360" text-anchor="middle" fill="#85e8ff">volume jt-&lt;firm&gt; — the test's code</text>
+
+        <path d="M310 251H450V86H588" fill="none" stroke="#75a0ff" stroke-width="1.5" marker-end="url(#ah)"/>
+        <path d="M450 186H588" fill="none" stroke="#75a0ff" stroke-width="1.5" marker-end="url(#ah)"/>
+        <path d="M450 281H588" fill="none" stroke="#75a0ff" stroke-width="1.5" marker-end="url(#ah)"/>
+        <text x="458" y="240" fill="#85e8ff">docker</text>
+      </svg>
+      <p class="flow-claim">Claude is never inside the box. Only text goes back and forth.</p>
+    </div>
+    <h3 style="margin:2.2rem 0 1rem;font-size:1.3rem">Example: "fix the failing test in acme"</h3>
+    <ul class="rows">
+      <li class="row"><div><h3>1 · Read</h3><p><code>sandbox scan acme cat src/App.test.jsx</code> — throwaway container, no network. Text comes back.</p></div></li>
+      <li class="row"><div><h3>2 · Write a patch</h3><p>Claude writes a patch file to its scratchpad on the Mac. It is text; nothing runs.</p></div></li>
+      <li class="row"><div><h3>3 · Apply</h3><p><code>sandbox apply acme &lt;patch&gt;</code> — <code>git apply</code> runs inside container <code>jt-acme</code>; Claude gets <code>git diff --stat</code>.</p></div></li>
+      <li class="row"><div><h3>4 · Run</h3><p><code>sandbox exec acme npm test</code> — runs inside the container as user <code>dev</code>; Claude gets the printed result.</p></div></li>
+      <li class="row"><div><h3>5 · Repeat</h3><p>Steps 1–4 until the test passes. You can open code-server in the browser to see the same code.</p></div></li>
+    </ul>
+    <p class="prose" style="margin-top:1.6rem"><strong>Each hop is checked.</strong> The guard hook allows only a fixed list of Claude tools and commands. <code>up</code>, <code>exec</code> and <code>apply</code> reload the container firewall first. A step Claude is not allowed to take is refused, not retried another way. Everything Claude reads from the test is data, not instructions: text addressed to an AI is reported as a finding. Limits of this setup (slower for many small edits, no live diagnostics, Claude cannot see the running app) are in docs/reference.md, Working with Claude.</p>
+  </section>
+
+  <section class="section" id="docs">
+    <div class="section-head">
+      <p class="eyebrow">Documents</p>
+      <h2>Where the <em>steps</em> live</h2>
+      <p>This page is the overview. The commands and their checks are in the repo.</p>
+    </div>
+    <ul class="rows">
+      <li class="row key"><div><h3><a class="cmd" href="https://github.com/agenticDraft/job-test-sandbox/blob/main/FIRST-INSTALLATION.md" target="_blank" rel="noopener">FIRST-INSTALLATION.md</a></h3><p>One-time setup and its verification.</p></div></li>
+      <li class="row key"><div><h3><a class="cmd" href="https://github.com/agenticDraft/job-test-sandbox/blob/main/USER-GUIDE.md" target="_blank" rel="noopener">USER-GUIDE.md</a></h3><p>What you do every time: your commands and a new test step by step.</p></div></li>
+      <li class="row"><div><h3><a class="cmd" href="https://github.com/agenticDraft/job-test-sandbox/blob/main/docs/reference.md" target="_blank" rel="noopener">docs/reference.md</a></h3><p>Every <code>sandbox</code> subcommand, the guard rules in full, and each step with the raw <code>docker</code> command it runs.</p></div></li>
+      <li class="row"><div><h3><a class="cmd" href="https://github.com/agenticDraft/job-test-sandbox/blob/main/README.md" target="_blank" rel="noopener">README.md</a></h3><p>Overview: design, rules, guardrails, accepted risks.</p></div></li>
+      <li class="row"><div><h3><span class="cmd">CLAUDE.md</span></h3><p>Rules for Claude in this repo. <code>docs/superpowers/</code> holds the design spec and plan.</p></div></li>
+    </ul>
+  </section>
+
+  <section class="section alt" id="why">
+    <div class="section-head">
+      <p class="eyebrow">Why</p>
+      <h2>Fake tests are a <em>malware</em> channel</h2>
+      <p>The "Contagious Interview" campaign is the best-known example aimed at developers.</p>
+    </div>
+    <div class="prose">
+      <p>The code runs at one of three moments: <code>npm install</code> (<code>preinstall</code> / <code>install</code> / <code>postinstall</code> / <code>prepare</code> scripts, in the repo or in any dependency), starting the app (obfuscated code in <code>vite.config.*</code>, <code>next.config.*</code>, <code>tailwind.config.*</code> or a server file), or opening the folder in an editor (<code>.vscode/tasks.json</code> with <code>"runOn": "folderOpen"</code>). Typical payloads steal browser passwords, crypto wallets, SSH keys and tokens.</p>
+    </div>
+    <div class="flow">
+      <div class="flow-top">
+        <p>Mac host · OrbStack Linux VM</p>
+        <p>No bind mounts · ports on 127.0.0.1</p>
+      </div>
+<pre class="mermaid">
+flowchart LR
+  subgraph Mac["Mac (host)"]
+    DF["boilerplate/Dockerfile"]
+    SCAN["work/&lt;firm&gt;/scan.md"]
+    OUT["work/&lt;firm&gt;/out/"]
+    CC["Claude Code<br/>(in job-test-sandbox)"]
+    BR["Sandbox browser profile"]
+  end
+  subgraph VM["OrbStack Linux VM"]
+    IMG["image job-sandbox:base<br/>(never modified)"]
+    VOL[("volume jt-&lt;firm&gt;<br/>test code")]
+    WORK["container jt-&lt;firm&gt;<br/>code-server + app"]
+    TMP["throwaway scan container<br/>--network none, :ro"]
+  end
+  DF -- "build once" --> IMG
+  IMG --> WORK
+  IMG --> TMP
+  VOL --- WORK
+  VOL -. "read-only" .- TMP
+  CC -- "sandbox scan" --> TMP
+  TMP -- "text only" --> SCAN
+  WORK -- "sandbox export" --> OUT
+  BR -- "127.0.0.1:8443 / :5173" --> WORK
+</pre>
+      <p class="flow-claim">The defence: that code never runs on the Mac, and nothing worth stealing is inside the box it runs in.</p>
+    </div>
+  </section>
+
+  <section class="section" id="arch">
+    <div class="section-head">
+      <p class="eyebrow">Architecture</p>
+      <h2>One image, a <em>new box</em> per test</h2>
+      <p>"A new clone for each project" means a new volume plus a new container from the same image. The image itself is never copied or changed.</p>
+    </div>
+    <ul class="rows">
+      <li class="row"><div><h3><span class="cmd">job-sandbox:base</span> image</h3><p>Node 24, git, unzip, curl, code-server; runs as user <code>dev</code>, not root. This is the "boilerplate you never touch". It is built once and only rebuilt on purpose (Node or code-server update).</p></div></li>
+      <li class="row"><div><h3><span class="cmd">jt-&lt;firm&gt;</span> volume</h3><p>The test's code lives here and <strong>never on the Mac disk</strong>.</p></div></li>
+      <li class="row"><div><h3><span class="cmd">jt-&lt;firm&gt;</span> container</h3><p>One per project, created from the image. It runs code-server and the app. No bind mounts, no Docker socket, all Linux capabilities dropped, ports bound to <code>127.0.0.1</code> only.</p></div></li>
+      <li class="row"><div><h3>Throwaway scan container</h3><p>The only way Claude looks at the code: no network, volume mounted read-only, removed after each command.</p></div></li>
+      <li class="row"><div><h3><span class="cmd">work/&lt;firm&gt;/</span> on the Mac</h3><p>Holds only text Claude wrote (<code>scan.md</code>) and what you exported (<code>out/</code>). It is gitignored: it shows where you applied.</p></div></li>
+    </ul>
+  </section>
+
+  <section class="section daylight" id="rules">
+    <div class="section-head">
+      <p class="eyebrow">Rules</p>
+      <h2>Non-negotiable</h2>
+      <p>They hold for every test, whatever the scan says.</p>
+    </div>
+    <ol class="rules">
+      <li class="rule"><div class="rule-line"></div><h3>Never clone, unzip or open a test repo on the Mac.</h3><p>Not in Finder, not in VS Code, not in a terminal. It goes straight into a volume.</p></li>
+      <li class="rule"><div class="rule-line"></div><h3>No bind mounts.</h3><p>No <code>-v /Users/...:/...</code>, and <strong>never</strong> mount <code>/var/run/docker.sock</code>.</p></li>
+      <li class="rule"><div class="rule-line"></div><h3>No credentials in the container.</h3><p>No <code>~/.ssh</code>, no main GitHub token, no <code>.npmrc</code> with a token. A token for delivery is fine-grained, limited to one repo, typed at push time and never saved.</p></li>
+      <li class="rule"><div class="rule-line"></div><h3>Ports bind to 127.0.0.1.</h3><p>Never <code>0.0.0.0</code> on the Mac side.</p></li>
+      <li class="rule"><div class="rule-line"></div><h3>Nothing runs before the scan is green.</h3><p>That includes <code>npm install</code>.</p></li>
+      <li class="rule"><div class="rule-line"></div><h3>Docker containers only, not OrbStack "machines".</h3><p>Machines see Mac files at <code>/mnt/mac</code> by default; containers do not.</p></li>
+      <li class="rule"><div class="rule-line"></div><h3>Claude never starts inside a test repo.</h3><p>And never runs anything from it (see docs/reference.md, Phase 2).</p></li>
+    </ol>
+  </section>
+
+  <section class="section alt" id="guard">
+    <div class="section-head">
+      <p class="eyebrow">Guardrails</p>
+      <h2>Three layers, plus <em>two</em> always-on pieces</h2>
+      <p>Each is scoped so normal work outside this repo and its containers is untouched. Details: docs/reference.md, Guardrails.</p>
+    </div>
+    <ul class="rows">
+      <li class="row key"><div><h3>Claude guard <span class="cmd">.claude/hooks/guard.sh</span></h3><p>The real boundary: a strict allowlist for Claude's tools, applied only when Claude Code runs in this repo. On while <code>.claude/settings.json</code> exists. You switch it with the zsh functions <code>guard-on</code>, <code>guard-off</code> and <code>guard-status</code> (Claude cannot); the <code>claude</code> wrapper switches it on before Claude Code starts in this repo. While it is off, <code>bin/sandbox</code> refuses test-code commands from Claude.</p></div></li>
+      <li class="row"><div><h3>Container defaults</h3><p>Inside <code>job-sandbox:base</code> containers: npm install scripts off, no git credential helper, orange prompt and code-server bars, no automatic tasks.</p></div></li>
+      <li class="row"><div><h3>Mac zsh guard <span class="cmd">shell/sandbox.zsh</span></h3><p>Guards against mistakes, not attacks: refuses <code>docker run|create</code> with bind mounts, <code>docker.sock</code>, <code>--privileged</code> or ports not on <code>127.0.0.1</code>, and blocks <code>git clone</code>, <code>unzip</code> and opening archives inside this repo.</p></div></li>
+      <li class="row"><div><h3>Intake hook for Claude <span class="cmd">.claude/hooks/no-intake.sh</span></h3><p>Always on, even with the guard off: no clone, no unpacking, no opening archives.</p></div></li>
+      <li class="row"><div><h3>Statusline</h3><p><code>🛡 sandbox: &lt;firm&gt; · &lt;verdict&gt; · &lt;running|stopped&gt;</code></p></div></li>
+    </ul>
+  </section>
+
+  <section class="section" id="risks">
+    <div class="section-head">
+      <p class="eyebrow">Residual risks</p>
+      <h2>What we <em>accept</em></h2>
+      <p>The container, not the scan, is the boundary. These are the gaps that remain.</p>
+    </div>
+    <ul class="chapters">
+      <li class="chapter"><p class="chapter-marker">Container → Mac services</p><p>Containers can reach servers on the Mac through <code>host.docker.internal</code>, including servers bound only to <code>127.0.0.1</code> (tested on OrbStack, 2026-10-03). OrbStack has no setting that blocks this for Docker containers, so every <code>sandbox up</code> firewalls the work container: the Mac (<code>0.250.250.254</code>), the rest of OrbStack's <code>0.0.0.0/8</code> except DNS, <code>198.18.0.0/15</code> and private ranges are rejected from inside its own network namespace (<code>bin/container-firewall.sh</code>), and nothing on the Mac is touched. A restart drops the rules, and <code>sandbox up</code> loads them right after it starts the container, so for that moment only code-server runs unfirewalled. <code>sandbox exec</code> and <code>sandbox apply</code> reload the rules first, so a container started outside <code>sandbox up</code> (the OrbStack app, <code>docker start</code>) is firewalled before anything runs in it. <strong>Start the container only with <code>sandbox up</code>.</strong></p></li>
+      <li class="chapter"><p class="chapter-marker">Container → internet</p><p>The container needs the internet for npm, so malware could phone home or mine crypto. The home network (router, NAS) is blocked by the same firewall (<code>10/8</code>, <code>172.16/12</code>, <code>192.168/16</code>, <code>100.64/10</code>, link-local, multicast); a VPN whose addresses are outside those ranges is not. IPv6 is off in the container on OrbStack's default network (checked 2026-10-05); if it is ever on, IPv6 from the container is blocked except ICMPv6. There is nothing to steal inside, the CPU and memory limits cap the damage, and you stop the container when idle.</p></li>
+      <li class="chapter"><p class="chapter-marker">Delivery token</p><p>Code that ran in the container can write the repo's own <code>.git/config</code> (<code>credential.helper</code>, <code>core.askPass</code>, <code>url.&lt;base&gt;.insteadOf</code>) and <code>.git/hooks</code>, so a token typed at <code>git push</code> inside the container can leak, and the internet is open. <strong>Deliver with <code>sandbox export</code></strong> (no network, volume read-only) and push the bundle from the Mac. If you must push from the container, read <code>git config --local --list</code> and <code>.git/hooks</code> first.</p></li>
+      <li class="chapter"><p class="chapter-marker">Browser</p><p>The test app's frontend runs in your browser, on the Mac, so the container firewall does not apply to it. The separate profile (FIRST-INSTALLATION.md, Task 4) keeps it away from your real sessions, but not from the network: its JavaScript can send requests to servers on the Mac's <code>127.0.0.1</code> and the home network. The browser keeps it from reading the replies unless the server allows it (CORS), but a request that changes something still lands. <strong>While the test app is open, do not keep other local dev servers or admin panels running.</strong></p></li>
+      <li class="chapter"><p class="chapter-marker">VM or kernel escape</p><p>Breaking out of the container and the OrbStack VM is possible in theory and rare in practice. Keep OrbStack updated.</p></li>
+      <li class="chapter"><p class="chapter-marker">Scan misses</p><p>See docs/reference.md, Phase 2 / Task 4; the container, not the scan, is the boundary.</p></li>
+    </ul>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <span class="brand"><span class="brand-mark" aria-hidden="true"></span>agenticDraft</span>
+  <p>Public repo: <a href="https://github.com/agenticDraft/job-test-sandbox" target="_blank" rel="noopener">agenticDraft/job-test-sandbox</a></p>
+</footer>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "dark" });
+</script>
+</body>
+</html>
